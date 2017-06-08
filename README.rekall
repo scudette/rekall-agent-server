@@ -1,0 +1,7 @@
+This directory contains the Rekall Agent Server software. It is written using
+the web2py framework and so for convenience it is also checked into the
+tree. The only directory which contains Rekall code is applications/Rekall/...
+
+There are currently no other modifications from the prestine web2py sources
+wnich can be found at https://github.com/web2py/web2py other than removing of
+web2py docs, examples and sample application.

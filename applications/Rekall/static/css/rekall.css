@@ -1,0 +1,35 @@
+img.icon {
+    height: 24px;
+}
+
+pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
+.string { color: green; }
+.number { color: darkorange; }
+.boolean { color: blue; }
+.null { color: magenta; }
+.key { color: red; }
+
+
+.collection_cell_rich {
+    cursor: pointer;
+}
+
+.btn {
+    border-bottom-left-radius: 5px;
+    border-bottom-right-radius: 5px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+
+.table-container {
+    padding-top: 5px;
+}
+
+
+.navbar-brand {
+    padding: 7px;
+}
+
+.logo {
+    max-height: 48px;
+}

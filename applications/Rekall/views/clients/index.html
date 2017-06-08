@@ -1,0 +1,14 @@
+{{extend 'layout.html'}}
+
+{{if request.vars.q:}}
+  <h2>Clients ({{=request.vars.q}})</h2>
+  <table id="clients" class="display" cellspacing="0" width="100%"></table>
+<script>
+  rekall.clients.search_clients("{{=request.vars.q}}", "#clients")
+</script>
+
+{{else:}}
+  <h2>Search clients</h2>
+  {{=form}}
+
+{{pass}}

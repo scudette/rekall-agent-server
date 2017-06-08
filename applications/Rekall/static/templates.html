@@ -1,0 +1,35 @@
+<script id="flow_status_template" type="text/x-jsrender">
+    {{:status}}
+</script>
+
+
+<script id="flow_collection_ids_template" type="text/x-jsrender">
+  <ul>{{for collections}}
+    <li>id: {{:id}}</li>
+  {{/for}}</ul>
+</script>
+
+
+<script id="flow_summary_template" type="text/x-jsrender">
+  {{:flow_id}}
+</script>
+
+
+<script id="modal_template" type="text/x-jsrender">
+  <div class="modal fade" id="modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="myModalLabel">{{:title}}</h4>
+        </div>
+        <div class="modal-body">
+          {{:body}}
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</script>

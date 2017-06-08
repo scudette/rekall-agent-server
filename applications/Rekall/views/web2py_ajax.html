@@ -1,0 +1,56 @@
+<script type="text/javascript"><!--
+    // These variables are used by the web2py_ajax_init function in web2py_ajax.js (which is loaded below).
+    {{=ASSIGNJS(
+    w2p_ajax_confirm_message = T('Are you sure you want to delete this object?'),
+    w2p_ajax_disable_with_message = T('Working...'),
+    w2p_ajax_date_format = T('%Y-%m-%d'),
+    w2p_ajax_datetime_format = T('%Y-%m-%d %H:%M:%S'),
+    ajax_error_500 = T.M('An error occured, please [[reload %s]] the page') % URL(args=request.args, vars=request.get_vars)
+    )}}
+    //--></script>
+
+<script type="text/javascript">
+  // Rekall JavaScript namespaces setups.
+  rekall = {};
+
+  // Globals to be shared between all the users.
+  rekall.globals = {
+    image_dir: "{{=URL('static', 'images')}}/",
+
+    // Global location of various controllers.
+    controllers: {
+      collection_view: "{{=URL(c='flows', f='collection_view')}}",
+      download: "{{=URL(c='flows', f='download')}}",
+      uploads_view: "{{=URL(c='flows', f='uploads_view')}}",
+      hex_view: "{{=URL(c='flows', f='hex_view')}}",
+    },
+
+    api_route: "{{=URL(c='api', f='run', host=True)}}",
+  };
+
+  // Cell renderers for data tables.
+  rekall.cell_renderers = {};
+
+  rekall.utils = {};
+
+  // Interact with clients.
+  rekall.clients = {};
+
+  // Interact with flows.
+  rekall.flows = {};
+
+  rekall.uploads = {};
+</script>
+
+
+{{
+response.files.insert(0,URL('static','js/jquery.js'))
+response.files.insert(1,URL('static','css/calendar.css'))
+response.files.insert(1,URL('static','css/rekall.css'))
+response.files.insert(2,URL('static','js/calendar.js'))
+response.files.insert(3,URL('static','js/web2py.js'))
+response.files.insert(3,URL('static','js/rekall.js'))
+response.files.insert(3,URL('static','js/jq-ajax-progress.js'))
+response.include_meta()
+response.include_files()
+}}

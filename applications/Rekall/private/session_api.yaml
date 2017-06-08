@@ -1,0 +1,342 @@
+- default: false
+  group: Output control
+  help: Set logging to debug level.
+  name: verbose
+  positional: false
+  short_opt: v
+  type: Boolean
+- default: false
+  group: Output control
+  help: Turn off logging to stderr.
+  name: quiet
+  positional: false
+  short_opt: q
+  type: Boolean
+- default: false
+  help: If set we break into the debugger on error conditions.
+  name: debug
+  positional: false
+  short_opt: ''
+  type: Boolean
+- choices:
+  - concise
+  - full
+  default: concise
+  help: How much information to show. Default is 'concise'.
+  name: output_style
+  positional: false
+  short_opt: ''
+  type: Choices
+- choices:
+  - DEBUG
+  - INFO
+  - WARNING
+  - ERROR
+  - CRITICAL
+  default: WARNING
+  help: The default logging level.
+  name: logging_level
+  positional: false
+  short_opt: ''
+  type: Choices
+- choices:
+  - PageTranslation
+  default: []
+  help: Add debug logging to these components.
+  name: log_domain
+  positional: false
+  short_opt: ''
+  type: ChoiceArray
+- default: null
+  group: Interface
+  help: The pager to use when output is larger than a screen full.
+  name: pager
+  positional: false
+  short_opt: ''
+- default: null
+  group: Interface
+  help: The number of output lines before we invoke the pager.
+  name: paging_limit
+  positional: false
+  short_opt: ''
+  type: IntParser
+- choices:
+  - auto
+  - 'yes'
+  - 'no'
+  default: auto
+  group: Interface
+  help: Color control. If set to auto only output colors when connected to a terminal.
+  name: colors
+  positional: false
+  short_opt: ''
+  type: Choices
+- choices:
+  - text
+  - json
+  - wide
+  - test
+  - data
+  default: text
+  group: Interface
+  help: The output format to use. Default (text)
+  name: format
+  positional: false
+  short_opt: F
+- default: []
+  help: Load user provided plugin bundle.
+  name: plugin
+  positional: false
+  short_opt: ''
+  type: ArrayStringParser
+- default: false
+  help: Show help about global paramters.
+  name: help
+  positional: false
+  short_opt: h
+  type: Boolean
+- choices:
+  - file
+  - memory
+  - timed
+  default: file
+  help: 'Type of cache to use. '
+  name: cache
+  positional: false
+  short_opt: ''
+  type: String
+- default: []
+  help: >-
+    Path to search for profiles. This can take any form supported by the IO Manager
+    (e.g. zip files, directories, URLs etc)
+  name: repository_path
+  positional: false
+  short_opt: ''
+  type: ArrayStringParser
+- help: The raw image to load.
+  name: filename
+  positional: false
+  short_opt: f
+- default: 20971520
+  help: >-
+    The maximum size of buffers we are allowed to read. This is used to control Rekall
+    memory usage.
+  name: buffer_size
+  positional: false
+  short_opt: ''
+  type: IntParser
+- default: null
+  help: If specified we write output to this file.
+  name: output
+  positional: false
+  short_opt: ''
+- default: 4
+  help: If specified, collectors with higher cost will not be used.
+  name: max_collector_cost
+  positional: false
+  short_opt: ''
+  type: IntParser
+- default: null
+  help: An alternative home directory path. If not set we use $HOME.
+  name: home
+  positional: false
+  short_opt: ''
+- default: '%(asctime)s:%(levelname)s:%(name)s:%(message)s'
+  help: The format string to pass to the logging module.
+  name: logging_format
+  positional: false
+  short_opt: ''
+- choices:
+  - normal
+  - fast
+  - thorough
+  default: normal
+  help: Tune Rekall's choice of algorithms, depending on performance priority.
+  name: performance
+  positional: false
+  short_opt: ''
+  type: Choices
+- choices:
+  - API
+  - Memory
+  default: null
+  help: Enable live memory analysis.
+  name: live
+  positional: false
+  required: false
+  short_opt: ''
+  type: Choice
+- group: Quotas
+  help: >-
+    Number of allocated CPU seconds Rekall is allowed to consume. If not set, unlimited
+    CPU time can be used.
+  name: cpu_quota
+  positional: false
+  short_opt: ''
+  type: IntParser
+- group: Quotas
+  help: The target maximal process load level (in percent).
+  name: load_quota
+  positional: false
+  short_opt: ''
+  type: IntParser
+- group: Autodetection Overrides
+  help: The DTB physical address.
+  name: dtb
+  positional: false
+  short_opt: ''
+  type: IntParser
+- help: A Relative offset for image file.
+  name: file_offset
+  positional: false
+  short_opt: o
+  type: IntParser
+- group: Virtualization support
+  help: The EPT physical address.
+  name: ept
+  positional: false
+  short_opt: ''
+  type: ArrayIntParser
+- default: UTC
+  group: Interface
+  help: Timezone to output all times (e.g. Australia/Sydney).
+  name: timezone
+  positional: false
+  short_opt: ''
+- default: null
+  help: Location of the profile cache directory.
+  name: cache_dir
+  positional: false
+  short_opt: ''
+- choices:
+  - manni
+  - igor
+  - lovelace
+  - xcode
+  - vim
+  - autumn
+  - abap
+  - vs
+  - rrt
+  - native
+  - perldoc
+  - borland
+  - arduino
+  - tango
+  - emacs
+  - friendly
+  - monokai
+  - paraiso-dark
+  - colorful
+  - murphy
+  - bw
+  - pastie
+  - rainbow_dash
+  - algol_nu
+  - paraiso-light
+  - trac
+  - default
+  - algol
+  - fruity
+  default: monokai
+  help: Highlighting style for interactive console.
+  name: highlighting_style
+  positional: false
+  short_opt: ''
+  type: Choices
+- choices:
+  - Module
+  - Symbol
+  - Export
+  default:
+  - Module
+  - Symbol
+  - Export
+  group: Interface
+  name: name_resolution_strategies
+  positional: false
+  short_opt: ''
+  type: ChoiceArray
+- default:
+  - nt
+  - win32k
+  - tcpip
+  - ntdll
+  group: Autodetection Overrides
+  help: >-
+    When autodetect_build_local is set to 'basic' we fetch these modules directly
+    from the symbol server.
+  name: autodetect_build_local_tracked
+  positional: false
+  short_opt: ''
+  type: ArrayStringParser
+- default: []
+  help: A pagefile to load into the image.
+  name: pagefile
+  positional: false
+  short_opt: ''
+  type: ArrayStringParser
+- choices:
+  - linux_index
+  - nt_index
+  - tsk
+  - osx
+  - pe
+  - windows_kernel_file
+  - rsds
+  - ntfs
+  - linux
+  default:
+  - linux_index
+  - nt_index
+  - tsk
+  - osx
+  - pe
+  - windows_kernel_file
+  - rsds
+  - ntfs
+  - linux
+  group: Autodetection Overrides
+  help: Autodetection method.
+  name: autodetect
+  positional: false
+  required: true
+  short_opt: ''
+  type: ChoiceArray
+- default: 1.0
+  group: Autodetection Overrides
+  help: Worst acceptable match for profile autodetection. (Default 1.0)
+  name: autodetect_threshold
+  positional: false
+  short_opt: ''
+  type: Float
+- choices:
+  - full
+  - basic
+  - none
+  default: basic
+  group: Autodetection Overrides
+  help: Attempts to fetch and build profile locally.
+  name: autodetect_build_local
+  positional: false
+  short_opt: ''
+  type: Choices
+- default: 18446744073709551616
+  group: Autodetection Overrides
+  help: How much of physical memory to scan before failing
+  name: autodetect_scan_length
+  positional: false
+  short_opt: ''
+  type: IntParser
+- group: Rekall Agent
+  help: >-
+    The Rekall Agent configuration file. When specified Rekall switches to Agent mode.
+  name: agent_configuration
+  positional: false
+  short_opt: ''
+- default: false
+  help: Prints the Rekall version and exits.
+  name: version
+  positional: false
+  short_opt: ''
+  type: Boolean

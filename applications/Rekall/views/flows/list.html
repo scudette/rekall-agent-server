@@ -1,0 +1,7 @@
+{{extend 'layout.html'}}
+
+<table id="plugins" class="display" cellspacing="0" width="100%"></table>
+<script>
+  rekall.flows.list_plugins("{{=URL(f='launch')}}/", "{{=client_id}}",
+    "#plugins");
+</script>

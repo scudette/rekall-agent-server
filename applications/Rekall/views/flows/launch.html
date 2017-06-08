@@ -1,0 +1,42 @@
+{{extend 'layout.html'}}
+
+{{if not launched:}}
+<div class="panel panel-default">
+  <div class="panel-heading">{{=api_info['name']}}</div>
+  <div class="panel-body">{{=api_info.get('description','')}}</div>
+
+  <form enctype="multipart/form-data" class="form-horizontal"
+        action="{{=URL()}}" method="post">
+    {{ for input in inputs: }}
+      {{=input}}
+    {{pass}}
+
+    <div class="form-group">
+      <label class="col-sm-2 control-label"></label>
+      <div class="col-sm-7">
+        <a class="btn btn-primary" role="button"
+           data-toggle="collapse" href="#sessionForm"
+           aria-expanded="false" aria-controls="sessionForm">
+          Session Parameters
+        </a>
+        {{=form.hidden_fields()}}
+        <input type="hidden" name="plugin" value="{{=plugin}}"></input>
+        <input type="hidden" name="client_id" value="{{=client_id}}"></input>
+        <input type="submit"></input>
+      </div>
+    </div>
+
+    <div class="collapse" id="sessionForm">
+      <div class="well">
+        {{ for input in session_inputs: }}
+          {{=input}}
+          {{pass}}
+      </div>
+    </div>
+  </form>
+
+</div>
+{{else:}}
+<h2>Plugin Args</h2>
+{{=BEAUTIFY(plugin_arg)}}
+{{pass}}

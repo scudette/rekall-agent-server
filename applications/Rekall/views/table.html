@@ -1,0 +1,25 @@
+{{def mytable(records, colnames, wrappers={}, class_name=''):}}
+<table class="{{=class_name}}">
+  <thead>
+   {{for col in colnames:}}
+     <th>{{=col}}</th>
+     {{pass}}
+  </thead>
+  <tbody>
+   {{for r in records:}}
+     <tr>{{for col in colnames:}}
+       {{wrapper=wrappers.get(col, unicode)}}
+       <td>{{=wrapper(r.get(col))}}</td>
+         {{pass}}
+     </tr>
+     {{pass}}
+  </tbody>
+</table>
+{{return}}
+
+
+{{def icon_wrapper(icon):}}
+   {{def func(x):}}
+      <a href={{=x}}><img class='icon' src={{=icon}} /></a>
+      {{return ''}}
+{{return func}}
