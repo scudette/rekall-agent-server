@@ -56,7 +56,29 @@ rekall.utils.build_table_from_collection = function (url, selector) {
       rekall.utils.error_modal(xhr.status + " Error: " + thrownError);
     },
     success: function (data) {
+      var nav_tabs = $('<ul class="nav nav-tabs" role="tablist">');
+      var tab_content = $("<div class='tab-content'>");
+
       rekall.utils.get(data, "tables", []).forEach(function (table) {
+        var table_dom = $('<table class="display" cellspacing="0">')
+            .attr("id", table.name);
+
+        var id = "pane_" + table.name;
+
+        nav_tabs.append(
+            $('<li role="presentation">').append(
+                $("<a role='tab'>")
+                    .attr("href", "#" + id)
+                    .text(table.name)
+                ));
+
+        tab_content.append(
+            $("<div class='tab-pane' role='tabpanel'>")
+                .attr("id", id).append(
+                    $("<div class='panel panel-default'>").append(
+                        $("<div class='panel-body'>")
+                            .append(table_dom))));
+
         var columns = [];
         var dataset_cache = {};
 
@@ -66,7 +88,7 @@ rekall.utils.build_table_from_collection = function (url, selector) {
 
           columns.push({title: name,
                         render: function(cell_data, type, row, meta) {
-                          if (cell_data == null || cell_data.text == null) {
+                          if (cell_data == null) {
                             return "";
                           }
 
@@ -83,12 +105,17 @@ rekall.utils.build_table_from_collection = function (url, selector) {
                                 cell_data, type, row, meta);
                           }
 
-                          return "";
+                          if (cell_type == "epoch") {
+                            return new Date(cell_data * 1000).toUTCString();
+                          }
+
+                          return $("<div>").text(cell_data).html();
                         }});
         });
 
         var dataset = data.table_data[table.name];
-        var data_table = $(selector).DataTable({
+        var data_table = $(table_dom).DataTable({
+          dom: '<"top"ifp<"clear">>rt<"bottom"lp<"clear">>',
           data: dataset,
           columns: columns,
           deferRender: false,
@@ -97,8 +124,17 @@ rekall.utils.build_table_from_collection = function (url, selector) {
         });
 
         rekall.cell_renderers.generic_json_pp_clicks(
-            dataset_cache, "collection", "Exported Data", selector);
+            dataset_cache, "collection", "Exported Data", table_dom);
       });
+
+      $(selector)
+          .append(nav_tabs)
+          .append(tab_content);
+
+      $(selector + ' a').click(function (e) {
+        e.preventDefault()
+        $(this).tab('show')
+      }).first().click();
 
       $("#progressbar").hide();
     }
