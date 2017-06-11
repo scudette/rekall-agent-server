@@ -25,3 +25,8 @@ indexes:
   - name: client_id
   - name: timestamp
     direction: desc
+
+- kind: permissions
+  properties:
+  - name: __key__
+    direction: desc

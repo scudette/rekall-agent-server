@@ -1,0 +1,14 @@
+{{extend 'layout.html'}}
+
+<div class="btn-group" role="toolbar" aria-label="toolbar">
+  <button type="button" class="btn btn-default"
+          onclick="rekall.users.remove_users('#users');">
+    <span class="glyphicon glyphicon-remove-sign" aria-hidden="true"
+          title="Delete Users"></span>&nbsp;
+  </button>
+</div>
+
+<table id="users" class="display" cellspacing="0" width="100%"></table>
+<script>
+  rekall.users.list_users("#users");
+</script>

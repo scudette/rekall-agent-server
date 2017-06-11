@@ -152,8 +152,6 @@ class FormBuilder(object):
                     _class="form-control",
                     _name=arg, requires=RegexValidator())
 
-        print "Unsupported arg %s: %s" % (arg, desc)
-
     def Build(self):
         inputs = []
         for arg, desc in sorted(
@@ -313,7 +311,6 @@ def launch():
         view_args["launched"] = True
         view_args["plugin_arg"] = plugin_arg
 
-    print view_args
     return dict(**view_args)
 
 

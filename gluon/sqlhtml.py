@@ -2752,13 +2752,13 @@ class SQLFORM(FORM):
                             if (field.tablename in tablenames and
                                 not(isinstance(field, Field.Virtual)))]
             if dbset._db._adapter.dbengine == 'google:datastore' and use_cursor:
-                rows = dbset.select(left=left, orderby=orderby,
+                rows = dbset.select(left=left,
                                     groupby=groupby, limitby=limitby,
                                     reusecursor=cursor,
                                     cacheable=True, *table_fields)
                 next_cursor = dbset._db.get('_lastcursor', None)
             else:
-                rows = dbset.select(left=left, orderby=orderby,
+                rows = dbset.select(left=left,
                                     groupby=groupby, limitby=limitby,
                                     cacheable=True, *table_fields)
                 next_cursor = None

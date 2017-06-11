@@ -4,6 +4,9 @@
 # ----------------------------------------------------------------------------------------------------------------------
 # Customize your APP title, subtitle and menus here
 # ----------------------------------------------------------------------------------------------------------------------
+from gluon.globals import current
+from api import users
+
 
 response.logo = A(IMG(_alt="Rekall Forensics", _class="logo",
                       _src=URL('static', 'images', 'Rekall Logo.svg')),
@@ -31,10 +34,20 @@ response.google_analytics_id = None
 
 response.menu = [
     (T('Dashboard'), False, URL('default', 'index'), []),
-    (T('Clients'), False, '#', [
-        (T('Search'), False, URL(c='clients', f='index'))
-    ]),
 ]
 
-if "auth" in locals():
-    auth.wikimenu()
+
+if users.check_permission(current, "clients.search", "/"):
+    response.menu.append(
+        (T('Clients'), False, '#', [
+            (T('Search'), False, URL(c='clients', f='index'))
+        ]))
+
+
+# User is administrator - show them the users menu..
+if users.check_permission(current, "users.admin", "/"):
+    response.menu.append(
+        (T('Users'), False, "#", [
+            (T('Manage Users'), False, URL(c="users", f="manage")),
+            (T('Add new User'), False, URL(c="users", f="add"))
+        ]))

@@ -9,14 +9,6 @@ rekall.utils.escape_text = function(text) {
 }
 
 
-rekall.utils.error_modal = function (text) {
-  $("#modalContainer").html($.templates("#modal_template").render({
-    body: text,
-    title: "Error",
-  }));
-  $("#modal").modal("show");
-}
-
 rekall.utils.get = function(obj, item, def) {
   var result = obj[item];
   if (result === undefined) {
@@ -52,9 +44,7 @@ rekall.utils.build_table_from_collection = function (url, selector) {
       return xhr;
     },
     url: url,
-    error: function (xhr, ajaxOptions, thrownError) {
-      rekall.utils.error_modal(xhr.status + " Error: " + thrownError);
-    },
+    error: rekall.utils.error,
     success: function (data) {
       var nav_tabs = $('<ul class="nav nav-tabs" role="tablist">');
       var tab_content = $("<div class='tab-content'>");
@@ -175,6 +165,52 @@ rekall.utils.jsonSyntaxHighlight = function (json) {
   return "<pre>" + result + "</pre>";
 }
 
+// Escape text to html safely.
+rekall.utils.safe_html = function(text) {
+  return $("<div>").text(text).html();
+}
+
+rekall.utils.error = function(jqXHR) {
+  $("#modalContainer").html(
+      rekall.templates.modal_template(
+          rekall.utils.safe_html(jqXHR.responseText),
+          "Error: " + jqXHR.statusText,
+          ));
+  $("#modal").modal("show");
+}
+
+// Templates
+rekall.templates = {}
+rekall.templates.modal_template = function(body, title) {
+  var result = $(`
+  <div class="modal fade" id="modal" tabindex="-1" role="dialog"
+       aria-labelledby="myModalLabel">
+    <div class="modal-dialog modal-lg" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal"
+                  aria-label="Close">
+             <span aria-hidden="true">&times;</span>
+          </button>
+          <h4 class="modal-title"></h4>
+        </div>
+        <div class="modal-body">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default"
+                  data-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+`);
+  result.find(".modal-title").text(title);
+  result.find(".modal-body").html(body);
+
+  return result;
+}
+
+
 
 // Client controller.
 
@@ -187,6 +223,7 @@ rekall.clients.search_clients = function (query, selector) {
       data: {
         query: query
       },
+      error: rekall.utils.error,
     },
     columns: [
       {
@@ -287,10 +324,10 @@ rekall.flows.list_plugins = function(launch_url, client_id, selector) {
     $.getJSON(rekall.utils.api("/plugin/get"), {plugin: plugin},
               function(data) {
                 $("#modalContainer").html(
-                    $.templates("#modal_template").render({
-                      body: rekall.cell_renderers.generic_json_renderer(data),
-                      title: "Plugin " + plugin,
-                    }));
+                    rekall.templates.modal_template(
+                        rekall.cell_renderers.generic_json_renderer(data),
+                        "Plugin " + plugin,
+                        ));
                 $("#modal").modal("show");
               });
   });
@@ -306,7 +343,8 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
       url: rekall.utils.api("/flows/list"),
       data: {
         client_id: client_id
-      }
+      },
+      error: rekall.utils.error,
     },
     columns: [
       {
@@ -517,10 +555,11 @@ rekall.cell_renderers.generic_json_pp_clicks = function(
     var key = $(this).data('key');
     var cell_data = dataset_cache[key];
 
-    $("#modalContainer").html($.templates("#modal_template").render({
-      body: detailed_renderer(cell_data),
-      title: title,
-    }));
+    $("#modalContainer").html(
+        rekall.templates.modal_template(
+            detailed_renderer(cell_data),
+            title,
+            ));
 
     $("#modal").modal("show");
   });
@@ -589,6 +628,75 @@ rekall.cell_renderers.collection_ids_renderer = function(
   return result;
 }
 
+
+// User management.
+rekall.users = {}
+
+rekall.users.list_users = function (selector) {
+  var user_cache = {};
+  $(selector).DataTable({
+    ajax: {
+      url: rekall.utils.api("/users/list"),
+      error: rekall.utils.error,
+    },
+    columns: [
+      {
+        title: "",
+        data: "user",
+        render: function(user, type, row, meta) {
+          var checkbox = $('<input type="checkbox">');
+          checkbox.attr("data-user", row.user);
+          checkbox.attr("data-resource", row.resource);
+          checkbox.attr("data-role", row.role);
+          return checkbox.prop("outerHTML");
+        }
+      },
+      {
+        title: "User",
+        data: "user",
+      },
+      {
+        title: "Resource",
+        data: "resource",
+      },
+      {
+        title: "Roles",
+        data: "role",
+      },
+      {
+        title: "Conditions",
+        data: "conditions",
+        defaultContent: "<i>Not set</i>"
+      }
+    ]
+  });
+}
+
+
+rekall.users.remove_users = function(selector) {
+  var counter = 0;
+
+  $(selector).find("input[type=checkbox]").each(function () {
+    var self = $(this);
+    if (this.checked) {
+      counter++;
+      $.ajax({
+        url: rekall.utils.api("/users/delete"),
+        data: {
+          user: self.attr("data-user"),
+          resource: self.attr("data-resource"),
+          role: self.attr("data-role"),
+        },
+        success: function() {
+          counter--;
+          if (counter == 0) {
+            location.reload();
+          };
+        },
+      });
+    }
+  });
+}
 
 
 // Hexviewer developed using information from:
