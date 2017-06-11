@@ -1,5 +1,3 @@
-import os
-
 from google.appengine.ext import blobstore
 from google.appengine.api import app_identity
 
@@ -34,8 +32,6 @@ def file_upload_receive():
     upload_id = db.uploads.insert(
         blob_key=blob_key,
         state="received")
-
-    print "Upload ID is %s %s" % (upload_id, upload_request.flow_id)
 
     db.upload_files.insert(
         file_information=upload_request.file_information.to_primitive(),

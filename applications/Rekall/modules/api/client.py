@@ -2,7 +2,6 @@
 import json
 import gluon
 
-
 def search(current, query=None):
     if not query:
         raise gluon.HTTP(400, "query must be provided.")
