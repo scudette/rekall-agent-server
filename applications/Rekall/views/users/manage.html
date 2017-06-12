@@ -1,14 +1,22 @@
 {{extend 'layout.html'}}
 
 <div class="btn-group" role="toolbar" aria-label="toolbar">
-  <button type="button" class="btn btn-default"
+  <button type="button" class="btn btn-default disabled"
+          id="remove"
           onclick="rekall.users.remove_users('#users');">
     <span class="glyphicon glyphicon-remove-sign" aria-hidden="true"
-          title="Delete Users"></span>&nbsp;
+          title="Delete"></span>&nbsp;Delete
   </button>
 </div>
 
-<table id="users" class="display" cellspacing="0" width="100%"></table>
+<div class="panel panel-default">
+  <div class="panel-heading">User Role Assignment</div>
+  <div class="panel-body">
+    <table id="users" class="display" cellspacing="0" width="100%"></table>
+  </div>
+</div>
+
 <script>
   rekall.users.list_users("#users");
+  rekall.utils.watch_checkboxes_to_disabled_button(".panel", "#remove");
 </script>

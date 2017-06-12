@@ -1,6 +1,24 @@
 {{extend 'layout.html'}}
 
-{{if not launched:}}
+{{if error: }}
+  <div id="error" style="display: none">
+    {{=error.body}}
+
+    <a href="{{=URL(c='clients', f='request_approval', vars=dict(client_id=client_id))}}"
+       type="button" class="btn btn-info">Request Approval</a>
+  </div>
+  <script>
+    $(function() {
+      $("#modalContainer").html(
+          rekall.templates.modal_template(
+              $("#error").html(),
+              "Error: {{=error.message}}",
+              ));
+      $("#modal").modal("show");
+    });
+  </script>
+{{pass}}
+
 <div class="panel panel-default">
   <div class="panel-heading">{{=api_info['name']}}</div>
   <div class="panel-body">{{=api_info.get('description','')}}</div>
@@ -36,7 +54,3 @@
   </form>
 
 </div>
-{{else:}}
-<h2>Plugin Args</h2>
-{{=BEAUTIFY(plugin_arg)}}
-{{pass}}

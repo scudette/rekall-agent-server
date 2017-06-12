@@ -65,11 +65,22 @@
         </div>
         <div class="collapse navbar-collapse">
           <ul class="nav navbar-nav navbar-right">
-            {{='auth' in globals() and auth.navbar('Welcome',mode='dropdown') or ''}}
+            {{if response.right_menu:}}
+            {{=MENU(response.right_menu, _class='nav navbar-nav', li_class='dropdown',ul_class='dropdown-menu')}}
+            {{pass}}
+
+            <ul class=" nav navbar-nav" type="">
+              <li class="web2py-menu-first">
+                <a href="#" id="inbox">Inbox
+                  <span class="badge" id="notifications"></span>
+                </a>
+              </li>
+            </ul>
           </ul>
           {{if response.menu:}}
           {{=MENU(response.menu, _class='nav navbar-nav',li_class='dropdown',ul_class='dropdown-menu')}}
           {{pass}}
+
         </div>
       </div>
     </nav>
@@ -121,7 +132,19 @@
     <script src="{{=URL('static','js/bootstrap.min.js')}}"></script>
     <script src="{{=URL('static','js/web2py-bootstrap3.js')}}"></script>
     {{block page_js}}{{end page_js}}
+    {{if response.google_analytics_id:}}
+    <!-- Analytics ==================================== -->
+    <script src="{{=URL('static','js/analytics.min.js')}}"></script>
+    <script type="text/javascript">
+      analytics.initialize({
+      'Google Analytics':{trackingId:'{{=response.google_analytics_id}}'}
+      });
+    </script>
+    {{pass}}
     <!-- Share ============================y============ -->
     <script src="{{=URL('static','js/share.js',vars=dict(static=URL('static','images')))}}"></script>
+    <script>
+      $("#templates").load("{{=URL('static','templates.html')}}");
+    </script>
   </body>
 </html>

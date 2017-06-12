@@ -1,4 +1,5 @@
 import functools
+import json
 import os
 import yaml
 
@@ -8,15 +9,13 @@ from google.appengine.api import users
 from google.appengine.ext import ndb
 
 
-print "Admin: %s" % users.is_current_user_admin()
-
-
 toplevel = os.path.dirname(__file__) + "/../.."
 
 _roles = yaml.load(open(
     os.path.join(toplevel, "private", "roles.yaml")).read())
 
 _roles_to_permissions = dict((x["role"], x["permissions"]) for x in _roles)
+_roles_by_name = dict((x["role"], x) for x in _roles)
 
 # All known roles
 roles = set(_roles_to_permissions)
@@ -108,20 +107,15 @@ def list(current):
     return dict(data=db(db.permissions).select().as_list())
 
 
-def add(current):
-    """A a new user."""
+def add(current, user, resource, role, condition=None):
+    """Add a new user role grant."""
     db = current.db
-    request = current.request
-    user = request.vars.user
-    resource = request.vars.resource or "/"
-    role = request.vars.role
-
     db.permissions.update_or_insert(
         dict(user=user, resource=resource, role=role),
         user=user,
         resource=resource,
         role=role,
-        condition=types.IAMCondition.from_json(request.vars.condition or "{}"))
+        condition=types.IAMCondition.from_json(condition or "{}"))
 
 
 def delete(current):
@@ -135,3 +129,55 @@ def delete(current):
     db((db.permissions.user == user) &
        (db.permissions.resource == resource) &
        (db.permissions.role == role)).delete()
+
+
+def get_role(current, role):
+    """Get a role description"""
+    return _roles_by_name.get(role, {})
+
+
+def get_current_username():
+    user = users.get_current_user()
+    if not user:
+        return ""
+    return user.email()
+
+
+def count_notifications(current):
+    user = get_current_username()
+    db = current.db
+    return db((db.notifications.user == user) &
+              (db.notifications.read == False)).count()
+
+
+def send_notifications(current, user, message_id, args):
+    """Send a notification to the user."""
+    db = current.db
+    db.notifications.insert(
+        from_user=get_current_username(),
+        user=user,
+        message_id=message_id,
+        args=args)
+
+    return "ok"
+
+
+def read_notifications(current):
+    db = current.db
+    result = []
+
+    for row in db(db.notifications.user == get_current_username()).select():
+        result.append(row.as_dict())
+        if not row.read:
+            row.update_record(read=True)
+
+    return dict(data=result)
+
+
+def clear_notifications(current):
+    db = current.db
+
+    db((db.notifications.user == get_current_username()) &
+       (db.notifications.read == True)).delete()
+
+    return dict()

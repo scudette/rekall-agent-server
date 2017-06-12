@@ -1,6 +1,14 @@
 """API implementations for interacting with flows."""
-import json
+import time
+import uuid
+
+from gluon import html
+from rekall_lib import serializer
 from rekall_lib.types import agent
+
+import utils
+
+from api import users
 
 
 def list(current, client_id):
@@ -10,13 +18,64 @@ def list(current, client_id):
     if client_id:
         for row in db(db.flows.client_id == client_id).select(
             orderby=~db.flows.timestamp):
-            status = agent.FlowStatus.from_json(row.status)
             flows.append(dict(
-                flow=json.loads(row.flow),
+                flow=row.flow.to_primitive(),
                 timestamp=row.timestamp,
                 creator=row.creator,
-                status=status.to_primitive(),
-                collection_ids=status.collection_ids,
+                status=row.status.to_primitive(),
+                collection_ids=row.status.collection_ids,
             ))
 
     return dict(data=flows)
+
+
+def launch_plugin_flow(current, client_id, rekall_session, plugin, plugin_arg):
+    """Launch the flow on the client."""
+    db = current.db
+    collection_id = unicode(uuid.uuid4())
+    flow_id = unicode(uuid.uuid4())
+    flow = agent.Flow.from_keywords(
+        flow_id=flow_id,
+        created_time=time.time(),
+        rekall_session=rekall_session,
+        file_upload=dict(
+            __type__="FileUploadLocation",
+            flow_id=flow_id,
+            base=html.URL(c="control", f='file_upload', host=True)),
+        ticket=dict(
+            location=dict(
+                __type__="HTTPLocation",
+                base=utils.route_api('/control/ticket'),
+                path_prefix=flow_id,
+            )),
+        actions=[
+            dict(__type__="PluginAction",
+                 plugin=plugin,
+                 args=plugin_arg,
+                 collection=dict(
+                     __type__="JSONCollection",
+                     id=collection_id,
+                     location=dict(
+                         __type__="BlobUploader",
+                         base=html.URL(
+                             c="control", f='upload', host=True),
+                         path_template=(
+                             "collection/%s/{part}" % collection_id),
+                     ))
+            )])
+
+    db.flows.insert(
+        flow_id=flow_id,
+        client_id=client_id,
+        status=agent.FlowStatus.from_keywords(
+            timestamp=time.time(),
+            client_id=client_id,
+            flow_id=flow_id,
+            status="Pending"),
+        creator=users.get_current_username(),
+        flow=flow,
+    )
+
+    db.collections.insert(
+        collection_id=collection_id,
+        flow_id=flow_id)
