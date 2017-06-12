@@ -10,6 +10,14 @@
     # Login and use the application at all.
     - application.login
 
+- role: Approver
+  description: >-
+    This role allows the user to approve access to clients. Users with this role
+    can grant Examiner or Investigator role on clients to other users.
+
+  permissions:
+    - clients.approve
+
 - role: Examiner
   description: >-
     This is grantable at the client level. It allows a user to view existing

@@ -1,0 +1,35 @@
+{{extend 'layout.html'}}
+
+<div class="panel panel-default">
+  <div class="panel-heading">Approve Client access Request</div>
+  <div class="panel-body">
+    The user {{=user}} has requested role
+
+    <button type="button" class="btn disabled">
+      {{=role}}
+    </button>
+    to be granted over the client {{=client_id}}.
+
+    <a type="button" class="btn btn-warning"
+       id="approve"
+       data-client_id="{{=client_id}}"
+       data-user="{{=user}}"
+       data-role="{{=role}}"
+       >
+      Approve Request
+    </a>
+
+    <div id="client_info"></div>
+  </div>
+</div>
+
+<script>
+  rekall.clients.render_client_info("{{=client_id}}", "#client_info");
+  var approve = $("#approve").click(function () {
+    $.ajax({
+      url: rekall.utils.api("/client/approver/grant") + "?" + $.param(approve.data()),
+      success: function() {
+        window.location.replace(rekall.globals.controllers.manage_users);
+      }});
+  });
+</script>

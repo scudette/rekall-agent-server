@@ -51,3 +51,10 @@ if users.check_permission(current, "users.admin", "/"):
             (T('Manage Users'), False, URL(c="users", f="manage")),
             (T('Add new User'), False, URL(c="users", f="add"))
         ]))
+
+
+response.right_menu = [
+    (users.get_current_username(), False, "#", [
+        (T('Logout'), False, URL('default', 'logout'), []),
+    ])
+]

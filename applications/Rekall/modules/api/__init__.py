@@ -33,8 +33,10 @@ class APIDispatcher(object):
     def error(self):
         raise http.HTTP(404, "Not Found")
 
-    def register(self, prefix, method, security_manager=lambda x: True):
-        prefix_components = [x for x in prefix.split("/") if x]
+    def register(self, path, method, security_manager=lambda x: True):
+        components = [x for x in path.split("/") if x]
+        prefix_components = components[:-1]
+        method_name = components[-1]
         container = self.dispatch
         for prefix_component in prefix_components:
             if prefix_component:
@@ -49,14 +51,13 @@ class APIDispatcher(object):
                 "API method %s must accept current as first parameter.",
                 method.__name__)
 
+        # First arg is always "current"
         method_args = method_args[1:]
 
         def run_method_cb(current, pos_args, kwargs):
             """A controller function which will launched to handle the API."""
             # Ensure the security manager allows this:
             security_manager(current)
-            current.response.headers['Content-Type'] = (
-                'application/json; charset=utf-8')
 
             # We allow method args to be called as positional or keyword
             local_kwargs = {}
@@ -64,8 +65,11 @@ class APIDispatcher(object):
                 if i < len(pos_args):
                     local_kwargs[arg_name] = pos_args[i]
                 else:
-                    if kwargs[arg_name] is not None:
+                    if kwargs.get(arg_name) is not None:
                         local_kwargs[arg_name] = kwargs[arg_name]
+
+            if len(local_kwargs) < len(method_args):
+                return dict(error="Not enough args provided.")
 
             s = method(current, **local_kwargs)
             if hasattr(s, 'as_list'):
@@ -73,18 +77,19 @@ class APIDispatcher(object):
             return s
 
         desc = MethodDesc(run_method_cb, method_args)
-        container[method.__name__] = desc
-        prefix_components.append(method.__name__)
+        container[method_name] = desc
+        prefix_components.append(method_name)
 
         self.methods.append(("/".join(prefix_components), desc))
 
     def call(self, current, api_method, *args, **kwargs):
-        args = api_method.split(".")
+        sep = "/" if "/" in api_method else "."
+        call_args = [x for x in api_method.split(sep) if x]
         container = api_dispatcher.dispatch
-        for i, arg in enumerate(args):
+        for i, arg in enumerate(call_args):
             dispatch = container.get(arg)
             if dispatch is None:
-                raise NotImplementedError()
+                raise NotImplementedError(api_method)
 
             if isinstance(dispatch, dict):
                 container = dispatch
@@ -105,6 +110,8 @@ class APIDispatcher(object):
                 continue
 
             if isinstance(dispatch, MethodDesc):
+                current.response.headers['Content-Type'] = (
+                    'application/json; charset=utf-8')
                 return current.response.json(
                     dispatch.run(current, current.request.args[i+1:],
                                  current.request.vars))
@@ -189,49 +196,87 @@ def require_admin():
 
 
 
-# We explicitly register all API plugins here.
-api_dispatcher.register("/", discover,
-                        require_application("clients.search"))
-api_dispatcher.register("/client", client.search,
+# We explicitly register all API plugins here in the one spot rather than use a
+# plugin system where APIs are scattered in all plugins. We also explicitly
+# declare the permissions required to access each API.
+api_dispatcher.register("/discover", discover,
                         require_application("clients.search"))
 
+# Manage clients and access controls.
+api_dispatcher.register("/client/search", client.search,
+                        require_application("clients.search"))
+
+# The approval mechanism is used to promote a user with clients.search
+# (i.e. Viewer) permission to clients.view permission (i.e. Examiner). Therefore
+# Viewer is allowed to proceed with the approval flow, until they receive
+# Examiner or Investigator on the client object.
+api_dispatcher.register("/client/approver/list", client.list_approvers,
+                        require_application("clients.search"))
+
+api_dispatcher.register("/client/approver/request", client.request_approval,
+                        require_application("clients.search"))
+
+# Only users with an Approver role can grant an approval.
+api_dispatcher.register("/client/approver/grant", client.approve_request,
+                        require_application("clients.approve"))
 
 # Client controls.
-api_dispatcher.register("/control", control.manifest,
+api_dispatcher.register("/control/manifest", control.manifest,
                         require_client_authentication())
-api_dispatcher.register("/control", control.startup,
+api_dispatcher.register("/control/startup", control.startup,
                         require_client_authentication())
-api_dispatcher.register("/control", control.jobs,
+api_dispatcher.register("/control/jobs", control.jobs,
                         require_client_authentication())
-api_dispatcher.register("/control", control.ticket,
+api_dispatcher.register("/control/ticket", control.ticket,
                         require_client_authentication())
 
 
 # Query the server about plugins.
-api_dispatcher.register("/plugin", plugins.list,
+api_dispatcher.register("/plugin/list", plugins.list,
                         require_application("application.login"))
-api_dispatcher.register("/plugin", plugins.get,
+api_dispatcher.register("/plugin/get", plugins.get,
                         require_application("application.login"))
 
-# Get information about collections.
-api_dispatcher.register("/collections", collections.metadata,
-                        require_application("clients.view"))
-
-# Deal with flows.
-api_dispatcher.register("/flows", flows.list,
+# Get information about collections for a specific client.
+api_dispatcher.register("/collections/metadata", collections.metadata,
                         require_client("clients.view"))
 
+# Deal with flows. Must have at least Examiner access to the client.
+api_dispatcher.register("/flows/list", flows.list,
+                        require_client("clients.view"))
+
+# Only users with Investigator role can create new flows on the client.
+api_dispatcher.register("/flows/plugins/launch", flows.launch_plugin_flow,
+                        require_client("flows.create"))
+
+
 # File uploads.
-api_dispatcher.register("/uploads", uploads.list,
+api_dispatcher.register("/uploads/list", uploads.list,
                         require_application("clients.view"))
 
 
 # User Account management.
-api_dispatcher.register("/users", users.list,
+api_dispatcher.register("/users/list", users.list,
                         require_admin())
 
-api_dispatcher.register("/users", users.add,
+api_dispatcher.register("/users/add", users.add,
                         require_admin())
 
-api_dispatcher.register("/users", users.delete,
+api_dispatcher.register("/users/delete", users.delete,
                         require_admin())
+
+api_dispatcher.register("/users/roles/get", users.get_role,
+                        require_admin())
+
+# Anyone can get their own notifications as long as they can use the app.
+api_dispatcher.register("/users/notifications/count", users.count_notifications,
+                        require_application("application.login"))
+
+api_dispatcher.register("/users/notifications/send", users.send_notifications,
+                        require_application("application.login"))
+
+api_dispatcher.register("/users/notifications/read", users.read_notifications,
+                        require_application("application.login"))
+
+api_dispatcher.register("/users/notifications/clear", users.clear_notifications,
+                        require_application("application.login"))

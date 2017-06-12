@@ -53,10 +53,10 @@ def jobs(current, client_id=None, secret=None):
         result = agent.JobFile()
         for row in db(db.flows.client_id == client_id).select():
             # Send off newly schedules flows.
-            if row.state == 'scheduled':
-                db.flows[row.id] = dict(state='tasked')
-                flow = agent.Flow.from_json(row.flow)
-                result.flows.append(flow)
+            if row.status.status == 'Pending':
+                row.status.status = "Started"
+                row.update_record(status=row.status)
+                result.flows.append(row.flow)
 
         row = db(db.clients.client_id == client_id).select().first()
         if row:
@@ -71,7 +71,6 @@ def ticket(current, flow_id):
     if row:
         # Update the status from the client.
         status = agent.FlowStatus.from_json(current.request.body.getvalue())
-        db.flows[row.id] = dict(status=status.to_primitive(),
-                                state=status.status)
+        row.update_record(status=status)
 
     return dict()

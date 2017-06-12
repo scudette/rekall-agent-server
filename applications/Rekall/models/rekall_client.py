@@ -1,4 +1,7 @@
 import datetime
+from api import dal
+from rekall_lib.types import agent
+
 
 db.define_table('clients',
                 Field('client_id', unique=True),
@@ -41,13 +44,11 @@ db.define_table('flows',
                 Field('timestamp', type="datetime",
                       default=datetime.datetime.utcnow,
                       comment="When the flow was created"),
-                Field('state', default='scheduled',
-                      comment='Current state of the flow'),
-                Field('flow', type='json',
+                Field('flow', type=dal.SerializerType(agent.Flow),
                       comment="Flow to be sent to the client."),
                 Field('creator', type='string',
                       comment="Username that created the flow"),
-                Field('status', type='json',
+                Field('status', type=dal.SerializerType(agent.FlowStatus),
                       comment="The latest Flow status."),
                 )
 
@@ -84,5 +85,4 @@ db.define_table("upload_files",
 
 
 from gluon import current
-current.auth = auth
 current.db = db

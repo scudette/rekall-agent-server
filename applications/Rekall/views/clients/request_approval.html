@@ -1,0 +1,19 @@
+{{extend 'layout.html'}}
+
+<div class="panel panel-default">
+  <div class="panel-heading">Request Approval</div>
+  <div class="panel-body">
+    You currently do not have permission to view this client. You can request an
+    approval to continue working on this client. You can request an Examiner
+    role (allowing read only access to already collected information) or an
+    Investigator role (allowing new flows to be launched on this client).
+
+    <div id="client_info"></div>
+
+    {{=form}}
+  </div>
+</div>
+
+<script>
+  rekall.clients.render_client_info("{{=client_id}}", "#client_info");
+</script>

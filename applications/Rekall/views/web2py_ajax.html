@@ -23,23 +23,14 @@
       download: "{{=URL(c='flows', f='download')}}",
       uploads_view: "{{=URL(c='flows', f='uploads_view')}}",
       hex_view: "{{=URL(c='flows', f='hex_view')}}",
+      request_approval: "{{=URL(c='clients', f='request_approval')}}",
+      manage_users: "{{=URL(c='users', f='manage')}}",
+      approve_request: "{{=URL(c='clients', f='approve_request')}}",
+      inspect_list: "{{=URL(c='flows', f='inspect_list')}}",
     },
 
     api_route: "{{=URL(c='api', f='run', host=True)}}",
   };
-
-  // Cell renderers for data tables.
-  rekall.cell_renderers = {};
-
-  rekall.utils = {};
-
-  // Interact with clients.
-  rekall.clients = {};
-
-  // Interact with flows.
-  rekall.flows = {};
-
-  rekall.uploads = {};
 </script>
 
 

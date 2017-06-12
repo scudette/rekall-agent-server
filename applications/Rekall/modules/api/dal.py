@@ -29,10 +29,21 @@ def SerializerType(cls):
         else:
             data = json.loads(x)
 
-        return serializer.unserialize(data , strict_parsing=False)
+        try:
+            return serializer.unserialize(data, strict_parsing=False)
+        except ValueError:
+            # If the data in the table is seriously messed up we just replace it
+            # with a new object.
+            return cls()
 
     return SQLCustomType(
         type='text',
         native='text',
         encoder=encode,
         decoder=decode)
+
+JSONType = SQLCustomType(
+    type="text",
+    native="text",
+    encoder=json.dumps,
+    decoder=lambda x: json.loads(x) if x else {})

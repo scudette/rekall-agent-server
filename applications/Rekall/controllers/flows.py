@@ -1,18 +1,19 @@
 # Launch flows.
-import json
 import re
-import os
 import time
 import uuid
 
 from gluon.globals import current
+from gluon import http
 from gluon import validators
 
 from google.appengine.ext import blobstore
 
 from rekall_lib.types import agent
 
+import api
 import utils
+
 
 from api import plugins
 
@@ -172,6 +173,9 @@ class FormBuilder(object):
         return inputs
 
     def ParseValue(self, value, desc):
+        if value is None:
+            return value
+
         type = desc['type']
         if type == 'Boolean':
             state = value == "on"
@@ -187,7 +191,7 @@ class FormBuilder(object):
         if type in ("ArrayStringParser", "ArrayIntParser") and not value:
             return
 
-        if type == "ChoiceArray" and set(value) == set(desc.get("default", [])):
+        if type == "ChoiceArray" and set(value) == set(desc.get("default") or []):
             return
 
         return value
@@ -237,6 +241,16 @@ class SessionFormBuilder(FormBuilder):
 
         return inputs
 
+    def ParseForm(self, vars):
+        result = {}
+        for desc in self.api_info:
+            name = desc["name"]
+            value = self.ParseValue(vars.get("session_" + name), desc)
+            if value is not None:
+                result[name] = value
+
+        return result
+
 
 def launch():
     plugin = request.vars.plugin
@@ -259,57 +273,25 @@ def launch():
     view_args = dict(plugin=plugin, client_id=client_id,
                      inputs=inputs, api_info=api_info,
                      launched=False, plugin_arg=None,
+                     error=None,
                      session_inputs=session_inputs,
                      form=form)
 
     if form.accepts(request, session):
-        response.flash = 'form accepted'
         plugin_arg = builder.ParseForm(form.vars)
-        # Schedule the flow for the client.
-        collection_id = unicode(uuid.uuid4())
-        flow_id = unicode(uuid.uuid4())
-        flow = agent.Flow.from_keywords(
-            flow_id=flow_id,
-            created_time=time.time(),
-            rekall_session=dict(live="API"),
-            file_upload=dict(
-                __type__="FileUploadLocation",
-                flow_id=flow_id,
-                base=URL(c="control", f='file_upload', host=True)),
-            ticket=dict(
-                location=dict(
-                    __type__="HTTPLocation",
-                    base=utils.route_api('/control/ticket'),
-                    path_prefix=flow_id,
-                )),
-            actions=[
-                dict(__type__="PluginAction",
-                     plugin=plugin,
-                     args=builder.ParseForm(form.vars),
-                     collection=dict(
-                         __type__="JSONCollection",
-                         id=collection_id,
-                         location=dict(
-                             __type__="BlobUploader",
-                             base=URL(
-                                 c="control", f='upload', host=True),
-                             path_template=(
-                                 "collection/%s/{part}" % collection_id),
-                         ))
-                )])
+        rekall_session = session_builder.ParseForm(form.vars)
 
-        db.flows.insert(
-            flow_id=flow_id,
-            client_id=client_id,
-            flow=flow.to_primitive(),
-        )
+        # The actual flow scheduling is done via the API.
+        try:
+            api.api_dispatcher.call(
+                current, "flows.plugins.launch",
+                client_id, rekall_session, plugin, plugin_arg)
+        except http.HTTP as e:
+            # Permission denied errors require approval.
+            view_args["error"] = e
 
-        db.collections.insert(
-            collection_id=collection_id,
-            flow_id=flow_id)
-
-        view_args["launched"] = True
-        view_args["plugin_arg"] = plugin_arg
+        return http.redirect(
+            URL(f="inspect_list", vars=dict(client_id=client_id)))
 
     return dict(**view_args)
 
