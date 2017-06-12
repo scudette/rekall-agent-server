@@ -2,7 +2,7 @@
   description: >
     Provides the ability to view and search for clients. This is the minimal
     role for accessing the application.
-
+  grantable_on: Application
   permissions:
     # Allow searching for clients (and reading high level metadata).
     - clients.search
@@ -14,7 +14,7 @@
   description: >-
     This role allows the user to approve access to clients. Users with this role
     can grant Examiner or Investigator role on clients to other users.
-
+  grantable_on: Application
   permissions:
     - clients.approve
 
@@ -23,29 +23,28 @@
     This is grantable at the client level. It allows a user to view existing
     flow results. The role provides essentially read only access to the client
     and all data collected from it.
-
+  grantable_on: Client
   permissions:
     - flows.view
-    - clients.search
     - clients.view
-    - application.login
 
 - role: Investigator
   description: >-
     This role allows the user to issue flows and inspect machines. It is only
     grantable on individual clients on a case by case basis (and can not be
     granted for all clients).
-
+  grantable_on: Client
   permissions:
     - flows.create
     - clients.view
+    - flows.view
 
 - role: Administrator
   description: >-
     This role allows the user to manage other user accounts, including changing
     their role assignments. This is equivalent to a GCP App admin, except that
     this role does not provide any GCP permissions.
-
+  grantable_on: Application
   permissions:
     - users.admin
     - application.login
