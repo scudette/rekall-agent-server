@@ -14,6 +14,7 @@ from api import uploads
 from api import users
 
 
+
 class MethodDesc(object):
     """A descriptor for an API method."""
 
@@ -86,7 +87,7 @@ class APIDispatcher(object):
         sep = "/" if "/" in api_method else "."
         call_args = [x for x in api_method.split(sep) if x]
         container = api_dispatcher.dispatch
-        for i, arg in enumerate(call_args):
+        for arg in call_args:
             dispatch = container.get(arg)
             if dispatch is None:
                 raise NotImplementedError(api_method)
@@ -130,153 +131,92 @@ def discover(_):
 
     return result
 
-def redirect_error(permission, resource):
-    raise http.HTTP(403, """
-You do not have a required permission: %s on resource %s.
-Please contact your administrator to be granted the required
-permission.""" % (permission, resource))
-
-
-def anonymous_access(request):
-    """Anyone can access this API."""
-    pass
-
-
-def require_client(permission):
-    """Requires client level permission."""
-    def wrapper(current):
-        resource = "/"
-        client_id = current.request.vars.client_id
-        if client_id:
-            resource = "/" + client_id
-            if users.check_permission(current, permission, resource):
-                return True
-
-        redirect_error(permission, resource)
-
-    return wrapper
-
-
-def require_application(permission):
-    """Requires application level permission."""
-    def wrapper(current):
-        resource = "/"
-        if users.check_permission(current, permission, resource):
-            return True
-
-        redirect_error(permission, resource)
-
-    return wrapper
-
-
-def require_client_authentication():
-    """Require authentication from the client.
-
-    This checks that requests are sent from valid clients which belong to this
-    deployment.
-    """
-    # TODO: Implement this.
-    def wrapper(current):
-        return True
-
-    return wrapper
-
-
-def require_admin():
-    """Requires admin level access (for user management)."""
-    def wrapper(current):
-        resource = "/"
-        permission = "users.admin"
-        if users.check_permission(current, permission, resource):
-            return True
-
-        redirect_error(permission, resource)
-
-    return wrapper
-
-
 
 # We explicitly register all API plugins here in the one spot rather than use a
 # plugin system where APIs are scattered in all plugins. We also explicitly
 # declare the permissions required to access each API.
 api_dispatcher.register("/discover", discover,
-                        require_application("clients.search"))
+                        users.require_application("clients.search"))
 
 # Manage clients and access controls.
 api_dispatcher.register("/client/search", client.search,
-                        require_application("clients.search"))
+                        users.require_application("clients.search"))
 
 # The approval mechanism is used to promote a user with clients.search
 # (i.e. Viewer) permission to clients.view permission (i.e. Examiner). Therefore
 # Viewer is allowed to proceed with the approval flow, until they receive
 # Examiner or Investigator on the client object.
 api_dispatcher.register("/client/approver/list", client.list_approvers,
-                        require_application("clients.search"))
+                        users.require_application("clients.search"))
 
 api_dispatcher.register("/client/approver/request", client.request_approval,
-                        require_application("clients.search"))
+                        users.require_application("clients.search"))
 
 # Only users with an Approver role can grant an approval.
 api_dispatcher.register("/client/approver/grant", client.approve_request,
-                        require_application("clients.approve"))
+                        users.require_application("clients.approve"))
 
 # Client controls.
 api_dispatcher.register("/control/manifest", control.manifest,
-                        require_client_authentication())
+                        users.require_client_authentication())
 api_dispatcher.register("/control/startup", control.startup,
-                        require_client_authentication())
+                        users.require_client_authentication())
 api_dispatcher.register("/control/jobs", control.jobs,
-                        require_client_authentication())
+                        users.require_client_authentication())
 api_dispatcher.register("/control/ticket", control.ticket,
-                        require_client_authentication())
+                        users.require_client_authentication())
 
 
 # Query the server about plugins.
 api_dispatcher.register("/plugin/list", plugins.list,
-                        require_application("application.login"))
+                        users.require_application("application.login"))
 api_dispatcher.register("/plugin/get", plugins.get,
-                        require_application("application.login"))
+                        users.require_application("application.login"))
 
 # Get information about collections for a specific client.
 api_dispatcher.register("/collections/metadata", collections.metadata,
-                        require_client("clients.view"))
+                        users.require_client("clients.view"))
+
+api_dispatcher.register("/collections/get", collections.get,
+                        users.require_client("clients.view"))
+
 
 # Deal with flows. Must have at least Examiner access to the client.
 api_dispatcher.register("/flows/list", flows.list,
-                        require_client("clients.view"))
+                        users.require_client("clients.view"))
 
 # Only users with Investigator role can create new flows on the client.
 api_dispatcher.register("/flows/plugins/launch", flows.launch_plugin_flow,
-                        require_client("flows.create"))
+                        users.require_client("flows.create"))
 
 
 # File uploads.
 api_dispatcher.register("/uploads/list", uploads.list,
-                        require_application("clients.view"))
+                        users.require_application("clients.view"))
 
 
 # User Account management.
 api_dispatcher.register("/users/list", users.list,
-                        require_admin())
+                        users.require_admin())
 
 api_dispatcher.register("/users/add", users.add,
-                        require_admin())
+                        users.require_admin())
 
 api_dispatcher.register("/users/delete", users.delete,
-                        require_admin())
+                        users.require_admin())
 
 api_dispatcher.register("/users/roles/get", users.get_role,
-                        require_admin())
+                        users.require_admin())
 
 # Anyone can get their own notifications as long as they can use the app.
 api_dispatcher.register("/users/notifications/count", users.count_notifications,
-                        require_application("application.login"))
+                        users.require_application("application.login"))
 
 api_dispatcher.register("/users/notifications/send", users.send_notifications,
-                        require_application("application.login"))
+                        users.require_application("application.login"))
 
 api_dispatcher.register("/users/notifications/read", users.read_notifications,
-                        require_application("application.login"))
+                        users.require_application("application.login"))
 
 api_dispatcher.register("/users/notifications/clear", users.clear_notifications,
-                        require_application("application.login"))
+                        users.require_application("application.login"))

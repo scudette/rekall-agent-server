@@ -218,6 +218,29 @@ rekall.clients.search_clients = function (query, selector) {
       dataset_cache, "summary", "Summary", selector);
 }
 
+// Pops the client info in a modal box.
+rekall.clients.show_info = function(client_id) {
+  $.ajax({
+    url: rekall.utils.api('/client/search'),
+    data: {
+      query: client_id
+    },
+    success: function(data) {
+      var summary = data.data[0];
+      if (summary) {
+        $("#modalContainer").html(
+            rekall.templates.modal_template(
+                rekall.cell_renderers.generic_json_renderer(summary),
+                "Client: " + client_id,
+                ));
+        $("#modal").modal("show");
+      }
+    },
+    error: rekall.utils.error,
+  });
+}
+
+
 
 rekall.flows = {}
 rekall.flows.list_plugins = function(launch_url, client_id, selector) {
@@ -612,8 +635,11 @@ rekall.cell_renderers.collection_ids_renderer = function(
 
   for (var i=0; i<collection_ids.length; i++) {
     result += rekall.utils.make_link(
-        rekall.globals.controllers.collection_view + "/" +
-            collection_ids[i], "launch-icon.png");
+        rekall.globals.controllers.collection_view + "?" + $.param({
+          collection_id: collection_ids[i],
+          client_id: row.status.client_id
+        }),
+        "launch-icon.png");
   }
 
   return result;
@@ -779,7 +805,8 @@ rekall.users.show_notifications = function() {
 
 
 rekall.collections = {}
-rekall.collections.build_table_from_collection = function (url, selector) {
+rekall.collections.build_table_from_collection = function (
+    client_id, collection_id, selector) {
   $.ajax({
     dataType: "json",
     xhr: function() {
@@ -795,7 +822,12 @@ rekall.collections.build_table_from_collection = function (url, selector) {
 
       return xhr;
     },
-    url: url,
+    url: rekall.utils.api("/collections/get"),
+    data: {
+      client_id: client_id,
+      collection_id: collection_id,
+      part: 0
+    },
     error: rekall.utils.error,
     success: function (data) {
       var nav_tabs = $('<ul class="nav nav-tabs" role="tablist">');
@@ -883,12 +915,14 @@ rekall.collections.build_table_from_collection = function (url, selector) {
   });
 }
 
-rekall.collections.describe_collection = function(collection_id, callback) {
+rekall.collections.describe_collection = function(
+    client_id, collection_id, callback) {
   $.ajax({
     dataType: "json",
     url: rekall.utils.api('/collections/metadata'),
     data: {
-      collection_id: collection_id
+      collection_id: collection_id,
+      client_id: client_id
     },
     success: function(metadata) {
       callback(rekall.cell_renderers.flow_summary_renderer(metadata.flow));

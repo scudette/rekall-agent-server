@@ -4,8 +4,11 @@
 # ----------------------------------------------------------------------------------------------------------------------
 # Customize your APP title, subtitle and menus here
 # ----------------------------------------------------------------------------------------------------------------------
-from gluon.globals import current
+import api
 from api import users
+
+from gluon.globals import current
+
 
 
 response.logo = A(IMG(_alt="Rekall Forensics", _class="logo",
@@ -36,13 +39,27 @@ response.menu = [
     (T('Dashboard'), False, URL('default', 'index'), []),
 ]
 
-
 if users.check_permission(current, "clients.search", "/"):
     response.menu.append(
         (T('Clients'), False, '#', [
             (T('Search'), False, URL(c='clients', f='index'))
         ]))
 
+if request.vars.client_id:
+    client_information = api.api_dispatcher.call(
+        current, "/client/search", request.vars.client_id)["data"]
+    if client_information:
+        client_information = client_information[0]
+        try:
+            client_name = client_information["summary"]["system_info"]["fqdn"]
+        except KeyError:
+            client_name = request.vars.client_id
+
+        response.menu[-1][3].append(
+            (client_name, False,
+             A(client_name,
+               _onclick="rekall.clients.show_info('%s');" % (
+                   request.vars.client_id))))
 
 # User is administrator - show them the users menu..
 if users.check_permission(current, "users.admin", "/"):
@@ -51,6 +68,12 @@ if users.check_permission(current, "users.admin", "/"):
             (T('Manage Users'), False, URL(c="users", f="manage")),
             (T('Add new User'), False, URL(c="users", f="add"))
         ]))
+
+# Only app admins can access the raw DB.
+if users.is_user_app_admin():
+    response.menu.append(
+        (T('DB'), False, URL(c="appadmin", f="manage")),
+    )
 
 
 response.right_menu = [

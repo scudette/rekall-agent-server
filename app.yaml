@@ -92,3 +92,10 @@ builtins:
 - appstats: on
 - admin_redirect: on
 - deferred: on
+
+
+libraries:
+  - name: pycrypto
+    version: "2.6.1"
+  - name: yaml
+    version: "3.10"

@@ -1,8 +1,5 @@
 # Launch flows.
 import re
-import time
-import uuid
-
 from gluon.globals import current
 from gluon import http
 from gluon import validators
@@ -296,36 +293,6 @@ def launch():
     return dict(**view_args)
 
 
-def collection():
-    """Stream the requested collection.
-
-    Note that we do not edit the collection in any way we just stream the same
-    thing the client sent to us. We rely on AppEngine's automatic blob store
-    detection to stream the data from blob store by setting the right header in
-    the response.
-    """
-    try:
-        collection_id = request.args[0]
-        if len(request.args) == 1:
-            part = 0
-        else:
-            part = int(request.args[1])
-
-    except (ValueError, IndexError) as e:
-        raise HTTP(400, "collection_id must be provided.")
-
-    row = db(db.collections.collection_id == collection_id).select().first()
-    if row:
-        row = db((db.collections.collection_id == collection_id) &
-                 (db.collections.part == part)).select().first()
-
-        if row:
-            response.headers[blobstore.BLOB_KEY_HEADER] = row.blob_key
-            response.headers["Content-Type"] = "application/json"
-        else:
-            raise HTTP(404, "collection not found")
-
-
 def download():
     upload_id = request.vars.upload_id
     filename = request.vars.filename or "download_" + upload_id
@@ -346,14 +313,8 @@ def collection_view():
     Note the actual data is streamed from Blobstore. This controller just
     creates the viewing page.
     """
-    try:
-        collection_id = request.args[0]
-        if len(request.args) == 1:
-            part = 0
-        else:
-            part = int(request.args[1])
-
-    except (ValueError, IndexError) as e:
-        raise HTTP(400, "collection_id must be provided.")
-
-    return dict(collection_id=collection_id, part=part)
+    part = request.vars.part or 0
+    if request.vars.collection_id and request.vars.client_id:
+        return dict(collection_id=request.vars.collection_id,
+                    client_id=request.vars.client_id,
+                    part=part)
