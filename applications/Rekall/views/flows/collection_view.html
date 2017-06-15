@@ -16,10 +16,10 @@
 
 <script>
     rekall.collections.build_table_from_collection(
-        "{{=URL(f='collection', args=[collection_id])}}",
-        "#collection");
+      "{{=client_id}}", "{{=collection_id}}", "#collection");
 
-    rekall.collections.describe_collection("{{=collection_id}}", function(text) {
-       $("#title").text(text);
+    rekall.collections.describe_collection(
+      "{{=client_id}}", "{{=collection_id}}", function(text) {
+        $("#title").text(text);
     });
 </script>

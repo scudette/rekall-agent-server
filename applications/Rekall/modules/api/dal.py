@@ -42,6 +42,7 @@ def SerializerType(cls):
         encoder=encode,
         decoder=decode)
 
+
 JSONType = SQLCustomType(
     type="text",
     native="text",

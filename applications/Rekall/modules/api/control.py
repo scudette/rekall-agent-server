@@ -32,37 +32,37 @@ def startup(current):
         current.request.body.getvalue())
 
     # Record the client event.
-    current.db.client_logs.insert(client_id=client_message.client_id,
+    current.db.client_logs.insert(client_id=current.client_id,
                           event='Startup',
                           data_type="StartupMessage",
                           data=client_message.to_primitive())
 
     current.db.clients.update_or_insert(
-        current.db.clients.client_id == client_message.client_id,
-        client_id=client_message.client_id,
+        current.db.clients.client_id == current.client_id,
+        client_id=current.client_id,
         hostname=client_message.system_info.node,
         summary=client_message.to_primitive())
 
     return {}
 
 
-def jobs(current, client_id=None, secret=None):
+def jobs(current):
     """List all the jobs intended for this client."""
     db = current.db
-    if client_id:
-        result = agent.JobFile()
-        for row in db(db.flows.client_id == client_id).select():
-            # Send off newly schedules flows.
-            if row.status.status == 'Pending':
-                row.status.status = "Started"
-                row.update_record(status=row.status)
-                result.flows.append(row.flow)
+    result = agent.JobFile()
+    for row in db(db.flows.client_id == current.client_id).select():
+        # Send off newly schedules flows.
+        if row.status.status == 'Pending':
+            row.status.status = "Started"
+            row.update_record(status=row.status)
+            result.flows.append(row.flow)
 
-        row = db(db.clients.client_id == client_id).select().first()
-        if row:
-            db.clients[row.id] = dict(last=datetime.datetime.utcnow())
+    # Update metadata about the client.
+    row = db(db.clients.client_id == current.client_id).select().first()
+    if row:
+        row.update_record(last=datetime.datetime.utcnow())
 
-        return result.to_primitive()
+    return result.to_primitive()
 
 
 def ticket(current, flow_id):
