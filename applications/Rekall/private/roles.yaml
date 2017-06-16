@@ -17,6 +17,7 @@
   grantable_on: Application
   permissions:
     - clients.approve
+    - artifacts.viewer
 
 - role: Examiner
   description: >-
@@ -48,3 +49,13 @@
   permissions:
     - users.admin
     - application.login
+    - artifact.write
+
+- role: Delegator
+  description: >-
+    This powerful role allows the user to create delegation tokens. Delegation
+    tokens allow unauthenticated access (e.g. by robots or scripts) to the API
+    on behalf of the delegator.
+  grantable_on: Application
+  permissions:
+    - token.mint

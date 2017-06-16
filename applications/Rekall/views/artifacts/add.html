@@ -1,0 +1,23 @@
+{{extend 'layout.html'}}
+
+<div class="btn-group" role="toolbar" aria-label="toolbar">
+  <button type="button" class="btn btn-default" id="upload">
+    Upload
+  </button>
+</div>
+
+
+<div class="editor" id="editor">
+{{=artifact_text}}
+</div>
+
+<script src="/static/js/ace/ace.js" type="text/javascript" charset="utf-8"></script>
+<script>
+  var editor = ace.edit("editor");
+  editor.setTheme("ace/theme/monokai");
+  editor.getSession().setMode("ace/mode/yaml");
+
+  $("#upload").click(function () {
+     rekall.artifacts.upload(editor.getValue());
+  });
+</script>

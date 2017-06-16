@@ -4,7 +4,7 @@ from gluon import http
 from google.appengine.ext import blobstore
 
 
-def metadata(current, collection_id):
+def metadata(current, collection_id, client_id):
     db = current.db
     if collection_id:
         collection_row = db(
@@ -17,6 +17,10 @@ def metadata(current, collection_id):
                             status=flow_row.status.to_primitive())
 
     return {}
+
+metadata.args = dict(
+    collection_id="The collection id to examine.",
+    client_id="The client owning the collection (used for ACL checks).")
 
 
 def get(current, collection_id, client_id, part):
@@ -41,3 +45,8 @@ def get(current, collection_id, client_id, part):
             response.headers["Content-Type"] = "application/json"
         else:
             raise http.HTTP(404, "collection not found")
+
+get.args = dict(
+    collection_id="The collection id to examine.",
+    client_id="The client owning the collection (used for ACL checks).",
+    part="The part of the collection (used for large collections)")

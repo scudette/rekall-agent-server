@@ -1,11 +1,10 @@
-import functools
+import datetime
+import logging
 import os
 import urlparse
 import yaml
 
-import gluon
 from api import types
-from gluon import http
 from google.appengine.api import users
 
 from rekall_lib import crypto
@@ -17,7 +16,7 @@ toplevel = os.path.dirname(__file__) + "/../.."
 _roles = yaml.load(open(
     os.path.join(toplevel, "private", "roles.yaml")).read())
 
-_roles_to_permissions = dict((x["role"], x["permissions"]) for x in _roles)
+_roles_to_permissions = dict((x["role"], set(x["permissions"])) for x in _roles)
 _roles_by_name = dict((x["role"], x) for x in _roles)
 
 # All known roles
@@ -33,6 +32,14 @@ for role_, permissions in _roles_to_permissions.iteritems():
 permissions = set(_permissions_to_roles)
 
 
+class PermissionDenied(Exception):
+    """Raised for unauthorized errors."""
+    def __init__(self, permission="", resource=""):
+        super(PermissionDenied, self).__init__()
+        self.permission = permission
+        self.resource = resource
+
+
 def role_to_permissions(role):
     return _roles_to_permissions.get(role, [])
 
@@ -41,7 +48,8 @@ def permission_to_roles(permission):
     return _permissions_to_roles.get(permission, [])
 
 
-def check_permission(current, permission, resource, user=None):
+def check_permission(current, permission, resource, user=None,
+                     with_tokens=True):
     """Check if user has permission on resource.
 
     This is the low level primitive for checking access.
@@ -55,6 +63,13 @@ def check_permission(current, permission, resource, user=None):
     which deploys it will be granted AppEngine Admin by the platform, and this
     allows them to add other users to application roles.
     """
+    # Check with token.
+    token = current.request.vars.token
+    if with_tokens and token and check_permission_with_token(
+        current, permission, resource, token):
+        current.request.token = token
+        return True
+
     db = current.db
     if user is None:
         user = users.get_current_user()
@@ -73,39 +88,42 @@ def check_permission(current, permission, resource, user=None):
     result = False
     # TODO: Implement conditions.
     for row in db(query).select():
+        logging.debug("Permission granted for %s with %s on %s",
+                      user, permission, resource)
         return True
+
+    logging.debug("Permission denied for %s with %s on %s",
+                  user, permission, resource)
+    return False
+
+
+def check_permission_with_token(current, permission, resource, token):
+    db = current.db
+    row = db(db.tokens.token_id == token).select().first()
+    if row:
+        # Is the token expired?
+        if datetime.datetime.utcnow() > row.expires:
+            return False
+
+        # First check that delegator has permission to delegate in the first
+        # place.
+        if not check_permission(current, permission, resource,
+                                user=row.delegator, with_tokens=False):
+            return False
+
+        # All roles are delegated.
+        if row.role == "All":
+            return True
+
+        # Check that permission is granted by the delegated role.
+        if permission in _roles_to_permissions.get(row.role, []):
+            return True
+
     return False
 
 
 def is_user_app_admin():
     return users.is_current_user_admin()
-
-
-def require(current, permission, resource=lambda req: "/"):
-    """A decorator on a controller which requires a permission.
-
-    Raises 403 Unauthorized if the permission is missing.
-    """
-    def decorator(func):
-
-        @functools.wraps(func)
-        def wrapper(*args, **kword):
-            # If the user is not logged in, redirect them to the log in page.
-            user = users.get_current_user()
-            if not user:
-                gluon.redirect(users.create_login_url(current.request.url))
-
-            resource_name = resource
-            if callable(resource):
-                resource_name = resource(current.request)
-
-            if check_permission(current, permission, resource_name):
-                return func(*args, **kword)
-
-            gluon.redirect(gluon.URL("logout"))
-
-        return wrapper
-    return decorator
 
 
 def list(current):
@@ -114,7 +132,7 @@ def list(current):
     return dict(data=db(db.permissions).select().as_list())
 
 
-def add(current, user, resource, role, condition=None):
+def add(current, user, resource, role, condition="{}"):
     """Add a new user role grant."""
     db = current.db
     db.permissions.update_or_insert(
@@ -122,7 +140,7 @@ def add(current, user, resource, role, condition=None):
         user=user,
         resource=resource,
         role=role,
-        condition=types.IAMCondition.from_json(condition or "{}"))
+        condition=types.IAMCondition.from_json(condition))
 
 
 def delete(current):
@@ -143,6 +161,20 @@ def get_role(current, role):
     return _roles_by_name.get(role, {})
 
 
+def list_roles(current):
+    return roles
+
+
+def my(current):
+    """List all of the calling user's roles."""
+    db = current.db
+    result = []
+    for row in db(db.permissions.user == get_current_username()).select():
+        result.append(row.as_dict())
+
+    return dict(data=result)
+
+
 def get_current_username():
     user = users.get_current_user()
     if not user:
@@ -150,19 +182,16 @@ def get_current_username():
     return user.email()
 
 
-def redirect_error(permission, resource):
-    raise http.HTTP(403, """
-You do not have a required permission: %s on resource %s.
-Please contact your administrator to be granted the required
-permission.""" % (permission, resource))
-
 
 # The following decorators are used to ensure that the current request complies
 # with the required permission.
 
-def anonymous_access(request):
+def anonymous_access():
     """Anyone can access this API."""
-    pass
+    def wrapper(current):
+        pass
+
+    return wrapper
 
 
 def require_client(permission):
@@ -175,7 +204,7 @@ def require_client(permission):
             if check_permission(current, permission, resource):
                 return True
 
-        redirect_error(permission, resource)
+        raise PermissionDenied(permission, resource)
 
     return wrapper
 
@@ -187,7 +216,7 @@ def require_application(permission):
         if check_permission(current, permission, resource):
             return True
 
-        redirect_error(permission, resource)
+        raise PermissionDenied(permission, resource)
 
     return wrapper
 
@@ -223,7 +252,7 @@ def require_client_authentication():
         # Signatures are sent in this special header.
         header = current.request.env['HTTP_X_REKALL_SIGNATURE']
         if not header:
-            raise http.HTTP(403)
+            raise PermissionDenied()
 
         header = serializer.unserialize(header, strict_parsing=False,
                                         type=crypto.HTTPSignature)
@@ -243,7 +272,7 @@ def require_client_authentication():
                         if asserted_url.path == our_url.path:
                             return True
 
-        raise http.HTTP(403)
+        raise PermissionDenied()
 
     return wrapper
 
@@ -256,7 +285,7 @@ def require_admin():
         if check_permission(current, permission, resource):
             return True
 
-        redirect_error(permission, resource)
+        raise PermissionDenied(permission, resource)
 
     return wrapper
 
@@ -299,3 +328,16 @@ def clear_notifications(current):
        (db.notifications.read == True)).delete()
 
     return dict()
+
+
+def mint_token(current, role, resource):
+    # We can not mint tokens from delegated access!
+    if current.request.token:
+        raise PermissionDenied("token.mint", "/")
+
+    db = current.db
+    id = db.tokens.insert(delegator=get_current_username(),
+                          role=role,
+                          resource=resource)
+
+    return dict(token=db.tokens[id].token_id)

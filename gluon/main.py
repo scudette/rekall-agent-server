@@ -373,7 +373,6 @@ def wsgibase(environ, responder):
                 # ##################################################
                 # access the requested application
                 # ##################################################
-
                 disabled = pjoin(request.folder, 'DISABLED')
                 if not exists(request.folder):
                     if app == rwthread.routes.default_application \

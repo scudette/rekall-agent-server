@@ -85,9 +85,18 @@ rekall.utils.safe_html = function(text) {
 }
 
 rekall.utils.error = function(jqXHR) {
+  var description;
+
+  if (jqXHR.responseJSON) {
+    description = rekall.cell_renderers.generic_json_renderer(
+        jqXHR.responseJSON);
+  } else {
+    description = rekall.utils.safe_html(jqXHR.responseText);
+  }
+
   $("#modalContainer").html(
       rekall.templates.modal_template(
-          rekall.utils.safe_html(jqXHR.responseText),
+          description,
           "Error: " + jqXHR.statusText,
           ));
   $("#modal").modal("show");
@@ -128,6 +137,171 @@ rekall.templates.modal_template = function(body, title, footer) {
   return result;
 }
 
+rekall.templates.mint_token = function(roles) {
+  var result = $(`
+<div class="panel panel-danger">
+ <div class="panel-heading">
+    <h3 class="panel-title">Mint an access token</h3>
+ </div>
+
+ <div class="panel-body">
+   To access the API without authentication you will need to obtain an access
+   token. The token is time limited and restricts access to a set of roles and
+   resources.
+
+   <div class="input-group input-group-sm">
+      <div class="input-group-btn">
+        <button type="button" class="btn btn-default" id="role">All</button>
+        <button type="button" class="btn btn-default dropdown-toggle"
+                data-toggle="dropdown" aria-haspopup="true"
+                aria-expanded="false"><span class="caret"></span></button>
+        <ul class="dropdown-menu">
+        </ul>
+      </div>
+      <input type="text" id="resource" class="form-control"
+             placeholder="Resource path...">
+   </div>
+   <div class="input-group input-group-lg">
+     <div class="input-group-btn">
+       <button type="button" class="btn btn-default" id="mint">Mint</button>
+     </div>
+     <input type="text" id="token" class="form-control"
+            placeholder="Click to generate..."">
+   </div>
+ </div>
+</div>
+`);
+
+  var ul = result.find("ul");
+  for (var i=0; i<roles.length; i++) {
+    var link = $("<a href='#'>").click(function () {
+      $("#role").text($(this).text());
+    });
+    link.text(roles[i]).appendTo($("<li>").appendTo(ul));
+  }
+
+  result.find("#mint").click(function () {
+    var role = $("#role").text();
+    var resource = $("#resource").val();
+    if (!resource) {
+      resource = "/";
+    }
+
+    $.ajax({
+      url: rekall.utils.api('/users/tokens/mint'),
+      data: {
+        role: role,
+        resource: resource,
+      },
+      success: function(mint) {
+        $("#token").val("token=" + mint.token).show();
+      },
+      error: function(jqXHR) {
+        $("#token").val(jqXHR.responseJSON.error).show().addClass(
+            "alert-danger");
+      },
+    });
+  });
+
+  return rekall.templates.modal_template(result, "Mint Access Token");
+}
+
+
+rekall.api = {}
+rekall.api.list = function(selector) {
+  $(selector).DataTable({
+    ajax: {
+      url: rekall.utils.api('/list'),
+    },
+    columns: [
+      {
+        title: "Method",
+        data: "method",
+      },
+      {
+        title: "Description",
+        data: "doc",
+      },
+      {
+        title: "Args",
+        data: "args",
+        width: "40%",
+        render: function(args, type, row, meta) {
+          var result = $("<table>");
+          for (var key in args) {
+            if (args.hasOwnProperty(key)) {
+              var row = $("<tr>");
+              $("<td>").text(key).appendTo(row);
+              $("<td>").text(args[key]).appendTo(row);
+              result.append(row);
+            }
+          }
+
+          return result.prop('outerHTML');
+        }
+      }
+    ]
+  });
+}
+
+
+rekall.api.mint_token = function() {
+  $.ajax({
+    url: rekall.utils.api('/users/roles/list'),
+    success: function(roles) {
+      $("#modalContainer").html(rekall.templates.mint_token(roles));
+      $("#modal").modal("show");
+    }
+  });
+}
+
+
+rekall.artifacts = {}
+
+rekall.artifacts.list = function(selector) {
+  var dataset = {};
+
+  $(selector).DataTable({
+    ajax: {
+      url: rekall.utils.api('/artifacts/list'),
+      error: rekall.utils.error,
+    },
+    columns: [
+      {
+        title: "Artifact",
+        data: "artifact",
+        render: function(artifact, type, row, meta) {
+          var text = artifact.name;
+          return rekall.cell_renderers.generic_json_pp(
+              dataset, text, "artifact",
+              artifact, type, row, meta);
+        }
+      },
+      {
+        title: "Description",
+        data: "artifact.doc"
+      },
+    ]});
+
+  rekall.cell_renderers.generic_json_pp_clicks(
+      dataset, "artifact", "Artifact", selector);
+}
+
+
+rekall.artifacts.upload = function(artifact) {
+  $.ajax({
+    method: "POST",
+    url: rekall.utils.api('/artifacts/add'),
+    data: {
+      artifact: artifact
+    },
+    error: rekall.utils.error,
+    success: function() {
+      window.location.replace(
+          rekall.globals.controllers.artifact_list);
+    }
+  });
+}
 
 
 // Client controller.

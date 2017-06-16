@@ -1,5 +1,6 @@
 """This module provides helpers for the Web2py DAL."""
 import json
+import logging
 
 from gluon.dal import SQLCustomType
 from rekall_lib import serializer
@@ -31,7 +32,8 @@ def SerializerType(cls):
 
         try:
             return serializer.unserialize(data, strict_parsing=False)
-        except ValueError:
+        except ValueError as e:
+            logging.debug("%s: Unable to decode %s", e, data)
             # If the data in the table is seriously messed up we just replace it
             # with a new object.
             return cls()
