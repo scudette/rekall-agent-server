@@ -414,7 +414,7 @@ class GoogleDatastore(NoSQLAdapter):
                 setattr(item, field.name, self.represent(value, field.type))
             item.put()
             counter += 1
-        self.db.logger.info(str(counter))
+
         return counter
 
     def insert(self, table, fields):

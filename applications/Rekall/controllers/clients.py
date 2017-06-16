@@ -1,6 +1,6 @@
 # Controller to manage clients.
 import api
-import utils
+from api import utils
 
 from gluon.globals import current
 

@@ -1,6 +1,7 @@
 """Methods for accessing clients."""
-from api import users
 import json
+
+from api import users
 import gluon
 
 def search(current, query=None):
@@ -28,6 +29,10 @@ def search(current, query=None):
 
     return dict(data=result)
 
+search.args = dict(
+    query="The query string. If it starts with a 'C.' then we display an exact "
+    "match. Otherwise we search for a hostname prefix.")
+
 
 def list_approvers(current, client_id):
     """List users which can approve client access."""
@@ -50,6 +55,11 @@ def request_approval(current, client_id, approver, role):
             user=users.get_current_username(),
             role=role))
 
+request_approval.args = dict(
+    client_id="The client to grant access to.",
+    approver="The user that should approve the request.",
+    role="The role granted.")
+
 
 def approve_request(current, client_id, user, role):
     """Grant the approval for the client."""
@@ -59,3 +69,8 @@ def approve_request(current, client_id, user, role):
         users.add(current, user, "/" + client_id, role)
 
         return "ok"
+
+approve_request.args = dict(
+    client_id="The client to grant access to.",
+    user="The user getting the approval.",
+    role="The role granted.")

@@ -5,10 +5,14 @@ from rekall_lib.types import agent
 from rekall_lib.types import client
 from rekall_lib.types import location
 
-import utils
+from google.appengine.ext import blobstore
+from google.appengine.api import app_identity
+
+from api import utils
 
 
 def manifest(_):
+    """Serve the installation manifest to the client."""
     result = agent.Manifest.from_keywords(
         startup=dict(
             rekall_session=dict(live="API"),
@@ -27,7 +31,7 @@ def manifest(_):
 
 
 def startup(current):
-    """Called in response to the startup flow issued by the manifest."""
+    """Called by the client when it starts up to provide a status update."""
     client_message = client.StartupMessage.from_json(
         current.request.body.getvalue())
 
@@ -66,11 +70,83 @@ def jobs(current):
 
 
 def ticket(current, flow_id):
+    """Client use this to report the progress of a flow."""
     db = current.db
     row = db(db.flows.flow_id == flow_id).select().first()
     if row:
         # Update the status from the client.
         status = agent.FlowStatus.from_json(current.request.body.getvalue())
         row.update_record(status=status)
+
+    return dict()
+
+
+
+# Interact with FileUploadLocationImpl
+
+def file_upload(current, upload_request):
+    """Request an upload ticket for commencing file upload."""
+    upload_request = location.FileUploadRequest.from_json(
+        upload_request)
+
+    return location.FileUploadResponse.from_keywords(
+        url=blobstore.create_upload_url(
+            utils.route_api("/control/file_upload_receive",
+                            upload_request=upload_request.to_json()),
+            gs_bucket_name=app_identity.get_default_gcs_bucket_name())
+    ).to_primitive()
+
+
+def file_upload_receive(current, upload_request):
+    upload_request = location.FileUploadRequest.from_json(
+        upload_request)
+    db = current.db
+    file_info = blobstore.parse_file_info(current.request.vars['file'])
+    gs_object_name = file_info.gs_object_name
+    blob_key = blobstore.create_gs_key(gs_object_name)
+
+    upload_id = db.uploads.insert(
+        blob_key=blob_key,
+        state="received")
+
+    db.upload_files.insert(
+        file_information=upload_request.file_information.to_primitive(),
+        upload_id=upload_id,
+        flow_id=upload_request.flow_id)
+
+    return dict()
+
+
+def upload(current, type, collection_id, part=0):
+    result = location.BlobUploadSpecs.from_keywords(
+        url=blobstore.create_upload_url(
+            utils.route_api("/control/upload_receive",
+                            type=type,
+                            collection_id=collection_id,
+                            part=part, client_id=current.client_id),
+            gs_bucket_name=app_identity.get_default_gcs_bucket_name())
+    ).to_primitive()
+    return result
+
+
+def upload_receive(current, type, collection_id, part=0, client_id=None):
+    """Handle GCS callback.
+
+    The user uploads to GCS directly and once the upload is complete, GCS calls
+    this handler with the file information. This API is not normally called
+    directly.
+    """
+    db = current.db
+    file_info = blobstore.parse_file_info(current.request.vars['file'])
+    gs_object_name = file_info.gs_object_name
+    blob_key = blobstore.create_gs_key(gs_object_name)
+
+    db.collections.update_or_insert(
+        db.collections.collection_id == collection_id,
+        client_id=client_id,
+        collection_id=collection_id,
+        part=part,
+        blob_key=blob_key,
+        gs_object_name=gs_object_name)
 
     return dict()

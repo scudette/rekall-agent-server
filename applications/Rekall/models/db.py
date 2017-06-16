@@ -6,8 +6,10 @@
 # -------------------------------------------------------------------------
 from gluon.globals import current
 import datetime
+
 from api import dal
 from rekall_lib.types import agent
+from rekall_lib.types import artifacts
 
 
 if request.global_settings.web2py_version < "2.14.1":
@@ -193,4 +195,15 @@ db.define_table("upload_files",
                 Field("upload_id", type="integer",
                       comment="ID of upload in the uploads table"),
                 Field("flow_id", comment="Flow which owns this upload."),
+                )
+
+
+db.define_table("artifacts",
+                Field("name", unique=True, notnull=True,
+                      comment="The unique name of the artifact."),
+                Field("artifact", type=dal.SerializerType(artifacts.Artifact),
+                      comment="The name of the artifact."),
+                Field("artifact_text",
+                      comment="The raw text of the artifact."),
+
                 )

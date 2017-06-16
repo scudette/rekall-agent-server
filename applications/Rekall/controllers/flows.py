@@ -9,7 +9,6 @@ from google.appengine.ext import blobstore
 from rekall_lib.types import agent
 
 import api
-import utils
 
 
 from api import plugins

@@ -9,6 +9,7 @@ from api import client
 from api import collections
 from api import control
 from api import flows
+from api import forensic_artifacts
 from api import plugins
 from api import uploads
 from api import users
@@ -18,9 +19,15 @@ from api import users
 class MethodDesc(object):
     """A descriptor for an API method."""
 
-    def __init__(self, method, args):
+    def __init__(self, method, args, doc="", args_desc=None):
         self.method = method
         self.args = args
+        self.doc = doc
+        if args_desc is None:
+            args_desc =dict((x, "") for x in args)
+
+        self.args_desc = args_desc
+
 
     def run(self, current, args, kwargs):
         return self.method(current, args, kwargs)
@@ -69,15 +76,14 @@ class APIDispatcher(object):
                     if kwargs.get(arg_name) is not None:
                         local_kwargs[arg_name] = kwargs[arg_name]
 
-            if len(local_kwargs) < len(method_args):
-                return dict(error="Not enough args provided.")
-
             s = method(current, **local_kwargs)
             if hasattr(s, 'as_list'):
                 s = s.as_list()
             return s
 
-        desc = MethodDesc(run_method_cb, method_args)
+        desc = MethodDesc(run_method_cb, method_args,
+                          doc=getattr(method, "__doc__", ""),
+                          args_desc=getattr(method, "args", None))
         container[method_name] = desc
         prefix_components.append(method_name)
 
@@ -97,7 +103,8 @@ class APIDispatcher(object):
                 continue
 
             if isinstance(dispatch, MethodDesc):
-                return dispatch.run(current, args, kwargs)
+                result = dispatch.run(current, args, kwargs)
+                return result
 
     def run(self, current):
         container = api_dispatcher.dispatch
@@ -113,9 +120,25 @@ class APIDispatcher(object):
             if isinstance(dispatch, MethodDesc):
                 current.response.headers['Content-Type'] = (
                     'application/json; charset=utf-8')
-                return current.response.json(
-                    dispatch.run(current, current.request.args[i+1:],
-                                 current.request.vars))
+                try:
+                    return current.response.json(
+                        dispatch.run(current, current.request.args[i+1:],
+                                     current.request.vars))
+                except users.PermissionDenied as e:
+                    current.response.status = 403
+                    return dict(error="Permission Denied",
+                                description="""
+You do not have a required permission: %s on resource %s.
+Please contact your administrator to be granted the required permission.""" % (
+    e.permission, e.resource))
+
+                except ValueError as e:
+                    current.response.status = 400
+                    return dict(error=unicode(e), type="Invalid Arguments")
+
+                except Exception as e:
+                    current.response.status = 500
+                    return dict(error=unicode(e), type=e.__class__.__name__)
 
         self.error()
 
@@ -123,20 +146,29 @@ class APIDispatcher(object):
 api_dispatcher = APIDispatcher()
 
 
-def discover(_):
+def discover(current):
     """List all the API endpoints and their known args."""
-    result = {}
+    result = []
     for method, desc in api_dispatcher.methods:
-        result[method] = desc.args
+        result.append(dict(method=method,
+                           doc=desc.doc,
+                           args=desc.args_desc))
 
-    return result
+    return dict(data=result)
 
 
 # We explicitly register all API plugins here in the one spot rather than use a
 # plugin system where APIs are scattered in all plugins. We also explicitly
 # declare the permissions required to access each API.
-api_dispatcher.register("/discover", discover,
-                        users.require_application("clients.search"))
+api_dispatcher.register("/list", discover,
+                        users.require_application("application.login"))
+
+# Manage artifacts.
+api_dispatcher.register("/artifacts/add", forensic_artifacts.add,
+                        users.require_application("artifacts.write"))
+
+api_dispatcher.register("/artifacts/list", forensic_artifacts.list,
+                        users.require_application("artifacts.viewer"))
 
 # Manage clients and access controls.
 api_dispatcher.register("/client/search", client.search,
@@ -165,6 +197,16 @@ api_dispatcher.register("/control/jobs", control.jobs,
                         users.require_client_authentication())
 api_dispatcher.register("/control/ticket", control.ticket,
                         users.require_client_authentication())
+
+api_dispatcher.register("/control/upload", control.upload,
+                        users.require_client_authentication())
+
+api_dispatcher.register("/control/upload_receive", control.upload_receive,
+                        users.anonymous_access())
+
+api_dispatcher.register("/control/file_upload", control.file_upload,
+                        users.require_client_authentication())
+
 
 
 # Query the server about plugins.
@@ -207,6 +249,18 @@ api_dispatcher.register("/users/delete", users.delete,
 
 api_dispatcher.register("/users/roles/get", users.get_role,
                         users.require_admin())
+
+# Anyone can list their own roles.
+api_dispatcher.register("/users/roles/list", users.list_roles,
+                        users.require_application("application.login"))
+
+api_dispatcher.register("/users/roles/my", users.my,
+                        users.require_application("application.login"))
+
+# Only assigned delegators may mint tokens.
+api_dispatcher.register("/users/tokens/mint", users.mint_token,
+                        users.require_application("token.mint"))
+
 
 # Anyone can get their own notifications as long as they can use the app.
 api_dispatcher.register("/users/notifications/count", users.count_notifications,

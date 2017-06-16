@@ -33,3 +33,18 @@ pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
 .logo {
     max-height: 48px;
 }
+
+
+.editor {
+    position: relative;
+    top: 10px;
+    right: 0;
+    bottom: 20px;
+    left: 0;
+    height: 600px;
+    height: -webkit-fill-available;
+}
+
+.input-group {
+    margin-top: 10px;
+}

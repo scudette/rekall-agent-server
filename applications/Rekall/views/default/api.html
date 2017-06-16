@@ -1,0 +1,18 @@
+{{extend 'layout.html'}}
+
+
+<div class="btn-group" role="toolbar" aria-label="toolbar">
+  <button type="button" class="btn btn-default" id="mint">
+    Mint Token
+  </button>
+</div>
+
+<div class="table-container">
+<table id="api" class="display" cellspacing="0" width="100%">
+</table>
+
+
+<script>
+  rekall.api.list("#api");
+  $("#mint").click(rekall.api.mint_token);
+</script>

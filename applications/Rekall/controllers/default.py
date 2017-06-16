@@ -4,7 +4,6 @@ from api import users
 from google.appengine.api import users as gae_users
 
 
-@users.require(current, "application.login")
 def index():
     form = FORM(INPUT(_name='q'), INPUT(_type='submit'))
     if form.accepts(request, session):
@@ -14,5 +13,10 @@ def index():
 
 
 def logout():
-    logout_url = gae_users.create_logout_url("/")
+    logout_url = gae_users.create_login_url("/")
     return dict(logout_url=logout_url)
+
+
+def api():
+    """Provide an introspective view of the available APIs."""
+    return dict()

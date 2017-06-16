@@ -1,0 +1,24 @@
+{{extend 'layout.html'}}
+
+<div class="btn-group" role="toolbar" aria-label="toolbar">
+  <button type="button" class="btn btn-default dropdown-toggle"
+          data-toggle="dropdown" aria-haspopup="true" id="add_flow">
+    <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"
+          title="Create New Flow"></span>&nbsp;
+    <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu">
+    <li><a href="{{=URL(f='add')}}">
+        Add an Artifact</a>
+    </li>
+  </ul>
+</div>
+
+<div class="table-container">
+<table id="artifacts" class="display" cellspacing="0" width="100%">
+</table>
+</div>
+
+<script>
+  rekall.artifacts.list("#artifacts");
+</script>

@@ -3,12 +3,10 @@ import time
 import uuid
 
 from gluon import html
-from rekall_lib import serializer
 from rekall_lib.types import agent
 
-import utils
-
 from api import users
+from api import utils
 
 
 def list(current, client_id):
@@ -58,7 +56,7 @@ def launch_plugin_flow(current, client_id, rekall_session, plugin, plugin_arg):
                      location=dict(
                          __type__="BlobUploader",
                          base=html.URL(
-                             c="control", f='upload', host=True),
+                             c="api", f="control", args=['upload'], host=True),
                          path_template=(
                              "collection/%s/{part}" % collection_id),
                      ))

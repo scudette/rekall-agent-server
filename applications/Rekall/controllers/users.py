@@ -1,7 +1,7 @@
 # User and account management.
 from gluon.globals import current
 import api
-import utils
+from api import utils
 
 def manage():
     return dict()
@@ -21,7 +21,12 @@ def add():
 
     form = utils.build_form(inputs)
     if form.accepts(request, session):
-        api.api_dispatcher.call(current, "users.add")
+        kwargs = dict(user=request.vars.user,
+                      resource=request.vars.resource,
+                      role=request.vars.role)
+
+        api.api_dispatcher.call(
+            current, "users.add", **kwargs)
 
         redirect(URL(f="manage"))
 
