@@ -18,8 +18,8 @@ def InitializeMenu():
     """
     response.logo = A(IMG(_alt="Rekall Forensics", _class="logo",
                           _src=URL('static', 'images', 'Rekall Logo.svg')),
-                      _class="navbar-brand", _href=URL(c="default", f="index"),
-                      _id="logo")
+                      _class="navbar-brand web2py-menu-active link",
+                      _href=URL(c="default", f="index"), _id="logo")
     response.title = request.application.replace('_', ' ').title()
     response.subtitle = ''
 
@@ -28,14 +28,10 @@ def InitializeMenu():
     response.meta.keywords = myconf.get('app.keywords')
     response.meta.generator = myconf.get('app.generator')
 
-    response.menu = [
-        (T('Dashboard'), False, URL('default', 'index'), []),
-    ]
-
     if users.check_permission(current, "clients.search", "/"):
         response.menu.append(
             (T('Clients'), False, '#', [
-                (T('Search'), False, URL(c='clients', f='index'))
+                (T('Search'), True, URL(c='default', f='index'))
             ]))
 
     if request.vars.client_id:
@@ -50,7 +46,7 @@ def InitializeMenu():
                     client_name = request.vars.client_id
 
                 response.menu[-1][3].append(
-                    (client_name, False,
+                    (client_name, True,
                      A(client_name,
                        _onclick="rekall.clients.show_info('%s');" % (
                            request.vars.client_id))))
@@ -59,16 +55,16 @@ def InitializeMenu():
 
 
     response.menu.append(
-        (T('Artifacts'), False, URL(c='artifacts', f='index')))
+        (T('Artifacts'), False, "#", [
+            (T('Manage Artifacts'), True, URL(c='artifacts', f='index')),
+            (T('Precanned Flows'), True, URL(c='flows', f='list_canned')),
+        ]))
 
 
     # User is administrator - show them the users menu..
     if users.check_permission(current, "users.admin", "/"):
         response.menu.append(
-            (T('Users'), False, "#", [
-                (T('Manage Users'), False, URL(c="users", f="manage")),
-                (T('Add new User'), False, URL(c="users", f="add"))
-            ]))
+            (T('Users'), True, URL(c="users", f="manage")))
 
     # Only app admins can access the raw DB.
     if users.is_user_app_admin():
@@ -77,7 +73,7 @@ def InitializeMenu():
         )
 
     response.menu.append(
-        (T('Api'), False, URL(c="default", f="api")))
+        (T('Api'), True, URL(c="default", f="api")))
 
     response.right_menu = [
         (users.get_current_username(), False, "#", [
@@ -100,3 +96,12 @@ elif not users.check_permission(current, "application.login", "/"):
 
 else:
     InitializeMenu()
+
+
+# If the request comes with the bare header, we do not render the template. This
+# is useful to be able to render into the main viewport with ajax calls, while
+# at the same time maintaining proper URLs for page refresh.
+if request.env["HTTP_X_REKALL_BARE_LAYOUT"]:
+    response.layout_path = "layout_bare.html"
+else:
+    response.layout_path = "layout.html"

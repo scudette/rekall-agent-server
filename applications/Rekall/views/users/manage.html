@@ -1,12 +1,19 @@
-{{extend 'layout.html'}}
+{{extend response.layout_path}}
 
-<div class="btn-group" role="toolbar" aria-label="toolbar">
+<div class="btn-group toolbar" role="toolbar" aria-label="toolbar">
   <button type="button" class="btn btn-default disabled"
           id="remove"
           onclick="rekall.users.remove_users('#users');">
     <span class="glyphicon glyphicon-remove-sign" aria-hidden="true"
           title="Delete"></span>&nbsp;Delete
   </button>
+  <a href="{{=URL(c='users', f='add')}}"
+     type="button" class="btn btn-default link"
+     id="add">
+    <span class="glyphicon glyphicon-check" aria-hidden="true"
+          title="Add"></span>&nbsp;Add
+  </a>
+
 </div>
 
 <div class="panel panel-default">

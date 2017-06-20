@@ -1,34 +1,44 @@
-{{extend 'layout.html'}}
+{{extend response.layout_path}}
 
-<div class="btn-group" role="toolbar" aria-label="toolbar">
-  <button type="button" class="btn btn-default dropdown-toggle"
+<div class="btn-group toolbar" role="toolbar" aria-label="toolbar">
+  <button type="button" class="btn btn-default dropdown-toggle right-square"
           data-toggle="dropdown" aria-haspopup="true" id="add_flow">
     <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"
           title="Create New Flow"></span>&nbsp;
     <span class="caret"></span>
   </button>
   <ul class="dropdown-menu">
-    <li><a href="{{=URL(f='list', vars=dict(client_id=client_id))}}">
+    <li><a href="{{=URL(f='list', vars=dict(client_id=client_id))}}"
+           class="link">
         Run Rekall Plugin</a></li>
     <li><a href="#">Collect Artifacts</a></li>
   </ul>
 
-  <button type="button" class="btn btn-default">
-    <span class="glyphicon glyphicon-remove-sign" aria-hidden="true"
+  <button type="button" class="btn btn-default disabled" id="delete">
+    <span class="glyphicon glyphicon-trash" aria-hidden="true"
           title="Delete Flows"></span>&nbsp;
   </button>
 
-  <div class="btn-group" role="group">
-    <button type="button" class="btn btn-default dropdown-toggle"
-            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-      Dropdown
-      <span class="caret"></span>
-    </button>
-    <ul class="dropdown-menu">
-      <li><a href="#">Dropdown link</a></li>
-      <li><a href="#">Dropdown link</a></li>
-    </ul>
-  </div>
+  <button type="button" class="btn btn-default disabled" id="save">
+    <span class="glyphicon glyphicon-floppy-save" aria-hidden="true"
+          title="Save Flows"></span>&nbsp;
+  </button>
+
+  <button type="button" class="btn btn-default" id="load">
+    <span class="glyphicon glyphicon-floppy-open" aria-hidden="true"
+          title="Load Flows"></span>&nbsp;
+  </button>
+
+  <button type="button" class="btn btn-default disabled" id="export">
+    <span class="glyphicon glyphicon-export" aria-hidden="true"
+          title="Export"></span>&nbsp;
+  </button>
+
+  <button type="button" class="btn btn-default" id="refresh">
+    <span class="glyphicon glyphicon-refresh" aria-hidden="true"
+          title="Refresh"></span>&nbsp;
+  </button>
+
 </div>
 
 <div class="table-container">
@@ -36,6 +46,15 @@
 </table>
 </div>
 <script>
-    rekall.flows.list_flows_for_client(
-        "{{=client_id}}", "#flows");
+  rekall.flows.list_flows_for_client("{{=client_id}}", "#flows");
+  rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#delete");
+  rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#export");
+  rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#save");
+  $("#refresh").click(function () {
+    rekall.utils.load(window.location.href);
+  });
+
+  $("#export").click(function () {
+    rekall.flows.export_flows("{{=client_id}}", "#flows");
+  });
 </script>

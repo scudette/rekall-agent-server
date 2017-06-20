@@ -1,6 +1,6 @@
-{{extend 'layout.html'}}
+{{extend response.layout_path}}
 
-<div class="btn-group" role="toolbar" aria-label="toolbar">
+<div class="btn-group toolbar" role="toolbar" aria-label="toolbar">
   <button type="button" class="btn btn-default dropdown-toggle"
           data-toggle="dropdown" aria-haspopup="true" id="add_flow">
     <span class="glyphicon glyphicon-plus-sign" aria-hidden="true"
@@ -8,7 +8,7 @@
     <span class="caret"></span>
   </button>
   <ul class="dropdown-menu">
-    <li><a href="{{=URL(f='add')}}">
+    <li><a href="{{=URL(f='add')}}" class="link">
         Add an Artifact</a>
     </li>
   </ul>

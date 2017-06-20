@@ -15,11 +15,11 @@ def manifest(_):
     """Serve the installation manifest to the client."""
     result = agent.Manifest.from_keywords(
         startup=dict(
-            rekall_session=dict(live="API"),
             # Drop progress reports when running this flow.
             ticket=dict(location=location.DevNull()),
             actions=[
                 client.StartupAction.from_keywords(
+                    rekall_session=dict(live="API"),
                     location=dict(
                         __type__="HTTPLocation",
                         base=utils.route_api("control/startup"),

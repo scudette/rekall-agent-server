@@ -6,8 +6,6 @@ from gluon import validators
 
 from google.appengine.ext import blobstore
 
-from rekall_lib.types import agent
-
 import api
 
 
@@ -35,6 +33,10 @@ def uploads_view():
 def hex_view():
     upload_id = request.vars.upload_id
     return dict(upload_id=upload_id)
+
+
+def list_canned():
+    return dict()
 
 
 class CommaSeparated(validators.Validator):
@@ -317,3 +319,15 @@ def collection_view():
         return dict(collection_id=request.vars.collection_id,
                     client_id=request.vars.client_id,
                     part=part)
+
+
+def save():
+    flows = []
+    flow_ids = request.vars.flows
+    if flow_ids:
+        for flow_id in flow_ids:
+            row = db(db.flows.flow_id == flow_id).select().first()
+            if row:
+                flows.append(row.flow.to_primitive())
+
+    return dict(flows=flows)

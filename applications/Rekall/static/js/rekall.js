@@ -1,14 +1,83 @@
 // Various utilities for the UI
 rekall.utils = {};
 
+rekall.utils.load = function(url, data) {
+  if (data) {
+    url += "?" + $.param(data);
+  };
+
+  $.ajax({
+    url: url,
+    headers: {
+      "x-rekall-bare-layout": 1,
+    },
+    success: function(data) {
+      $("#main").html(data);
+      if (window.location.href != url) {
+        window.history.pushState({url: url}, "", url);
+      }
+      $("#modal").modal("hide");
+    }
+  });
+}
+
+rekall.utils.submit_form = function(obj) {
+  var selector = obj.selector || "form";
+  var url = obj.url || $(selector).attr("action");
+  var method = $(selector).attr("method") || "GET";
+  var data;
+
+  if (method == "GET") {
+    url += "?" + $(selector).serialize();
+  } else {
+    data = $(selector).serializeArray();
+  }
+  $.ajax({
+    url: url,
+    method: method,
+    headers: {
+      "x-rekall-bare-layout": 1,
+    },
+    data: data,
+    success: function(html) {
+      $("#main").html(html);
+      if (window.location.href != url) {
+        window.history.pushState({url: url, data: data, method: method}, "", url);
+      }
+
+      if (obj.next) {
+        rekall.utils.load(obj.next, obj.data);
+      }
+    }
+  });
+}
+
 rekall.utils.api = function(endpoint) {
   return rekall.globals.api_route + endpoint;
+}
+
+
+// A wrapper around an $.ajax object which modifies the url, adds a common csrf
+// header etc. The returned object should be sent to $.ajax for actual
+// processing.
+rekall.utils.call = function(obj) {
+  return {
+    method: obj.method,
+    xhr: obj.xhr,
+    dataType: "json",
+    url: rekall.utils.api(obj.api),
+    headers: {
+      "x-rekall-csrf-token": rekall.csrf_token
+    },
+    data: obj.data,
+    success: obj.success,
+    error: obj.error
+  };
 }
 
 rekall.utils.escape_text = function(text) {
   return $("<div>").text(text).html();
 }
-
 
 rekall.utils.get = function(obj, item, def) {
   var result = obj[item];
@@ -19,7 +88,7 @@ rekall.utils.get = function(obj, item, def) {
 }
 
 rekall.utils.make_link = function(url, image) {
-  var link = $("<a>");
+  var link = $("<a class='link'>");
   link.attr("href", url);
   var img = $("<img class='icon'>");
   img.attr("src", rekall.globals.image_dir + image);
@@ -47,8 +116,8 @@ rekall.utils.watch_checkboxes_to_disabled_button = function(
 }
 
 rekall.utils.update_badge = function() {
-  $.ajax({
-    url: rekall.utils.api('/users/notifications/count'),
+  rekall.utils.call({
+    api: '/users/notifications/count',
     success: function(count) {
       if (count == 0) count = "";
       $("#notifications").text(count);
@@ -56,7 +125,6 @@ rekall.utils.update_badge = function() {
     error: function() {}, // Ignore errors.
   });
 }
-
 
 rekall.utils.jsonSyntaxHighlight = function (json) {
   json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -100,6 +168,15 @@ rekall.utils.error = function(jqXHR) {
           "Error: " + jqXHR.statusText,
           ));
   $("#modal").modal("show");
+}
+
+rekall.utils.error_container = function(jqXHR) {
+  if (jqXHR.responseJSON) {
+    $("#error_message").text(jqXHR.responseJSON.error);
+  } else {
+    $("#error_message").text(jqXHR.responseText);
+  }
+  $("#error_message_container").show();
 }
 
 // Templates. We use jquery native templates because these are faster and safer
@@ -187,8 +264,8 @@ rekall.templates.mint_token = function(roles) {
       resource = "/";
     }
 
-    $.ajax({
-      url: rekall.utils.api('/users/tokens/mint'),
+    $.ajax(rekall.utils.call({
+      api: '/users/tokens/mint',
       data: {
         role: role,
         resource: resource,
@@ -200,19 +277,122 @@ rekall.templates.mint_token = function(roles) {
         $("#token").val(jqXHR.responseJSON.error).show().addClass(
             "alert-danger");
       },
-    });
+    }));
   });
 
   return rekall.templates.modal_template(result, "Mint Access Token");
 }
 
+rekall.templates.save_flows = function(canned_flow) {
+  var form = $(`
+<form id="canned_flow_form" class="form-horizontal">
+<div id="canned_flow"></div>
+<div class="form-group">
+ <label class="col-sm-2 control-label" for="name"
+  title="The name of the canned flow">Name</label>
+ <div class="col-sm-7">
+   <input class="form-control" id="name" type="text">
+ </div>
+</div>
+<div class="form-group">
+ <label class="col-sm-2 control-label" for="category"
+  title="The name of the canned flow">Category</label>
+ <div class="col-sm-7">
+   <input class="form-control" id="category" type="text">
+ </div>
+</div>
+<div class="form-group">
+ <label class="col-sm-2 control-label" for="description"
+  title="A description of this canned flow.">Description</label>
+ <div class="col-sm-7">
+   <input class="form-control" id="description" type="text">
+ </div>
+</div>
+</form>`).append(rekall.templates.error_message_container());
+  form.find("#canned_flow").html(
+      rekall.cell_renderers.generic_json_renderer(canned_flow));
+
+  return form;
+}
+
+rekall.templates.error_message_container = function() {
+  return $(`
+<div class="alert alert-danger" role="alert"
+  id="error_message_container" style="display: none">
+  <span class="glyphicon glyphicon-exclamation-sign"
+   aria-hidden="true"></span>
+  <span class="sr-only">Error:</span>
+  <div id="error_message"></div>
+</div>
+`);
+}
+
+rekall.templates.load_precanned_flow_template = function(client_id) {
+  var table = $(`
+<div class="table-container">
+  <table id="canned" class="display" cellspacing="0" width="100%"></table>
+</div>
+`).append(rekall.templates.error_message_container());
+
+  table.find("#canned").DataTable({
+    ajax: rekall.utils.call({
+      api: "/flows/list_canned",
+      error: rekall.utils.error,
+    }),
+    columns: [
+      {
+        title: '',
+        data: "name",
+        sortable: false,
+        render: function(name, type, row, meta) {
+          var link = $('<a href="#">');
+          link.attr("data-name", name);
+          var img = $("<img class='icon'>")
+              .attr("src", rekall.globals.image_dir + 'launch-icon.png')
+              .appendTo(link);
+
+          return link.prop("outerHTML");
+        }
+      },
+      {
+        title: "Category",
+        data: "category"
+      },
+      {
+        title: "Name",
+        data: "name"
+      },
+      {
+        title: "Description",
+        data: "description",
+      },
+    ]
+  });
+
+  table.on("click", "a[data-name]", function() {
+    $.ajax(rekall.utils.call({
+      api: "/flows/launch_canned",
+      data: {
+        client_id: client_id,
+        name: $(this).data("name"),
+      },
+      error: rekall.utils.error_container,
+      success: function() {
+        rekall.utils.load(window.location.href);
+        $("#modal").modal("hide");
+      }
+    }));
+  });
+
+  return table;
+}
 
 rekall.api = {}
 rekall.api.list = function(selector) {
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api('/list'),
-    },
+    ajax: rekall.utils.call({
+      api: '/list',
+    }),
     columns: [
       {
         title: "Method",
@@ -244,17 +424,15 @@ rekall.api.list = function(selector) {
   });
 }
 
-
 rekall.api.mint_token = function() {
-  $.ajax({
-    url: rekall.utils.api('/users/roles/list'),
+  $.ajax(rekall.utils.call({
+    api: '/users/roles/list',
     success: function(roles) {
       $("#modalContainer").html(rekall.templates.mint_token(roles));
       $("#modal").modal("show");
     }
-  });
+  }));
 }
-
 
 rekall.artifacts = {}
 
@@ -262,10 +440,10 @@ rekall.artifacts.list = function(selector) {
   var dataset = {};
 
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api('/artifacts/list'),
+    ajax: rekall.utils.call({
+      api: '/artifacts/list',
       error: rekall.utils.error,
-    },
+    }),
     columns: [
       {
         title: "Artifact",
@@ -287,29 +465,26 @@ rekall.artifacts.list = function(selector) {
       dataset, "artifact", "Artifact", selector);
 }
 
-
 rekall.artifacts.upload = function(artifact) {
-  $.ajax({
+  $.ajax(rekall.utils.call({
     method: "POST",
-    url: rekall.utils.api('/artifacts/add'),
+    api: '/artifacts/add',
     data: {
       artifact: artifact
     },
     error: rekall.utils.error,
     success: function() {
-      window.location.replace(
-          rekall.globals.controllers.artifact_list);
+      rekall.utils.load(rekall.globals.controllers.artifact_list);
     }
-  });
+  }));
 }
-
 
 // Client controller.
 rekall.clients = {}
 
 rekall.clients.render_client_info = function(client_id, selector) {
-  $.ajax({
-    url: rekall.utils.api('/client/search'),
+  $.ajax(rekall.utils.call({
+    api: '/client/search',
     data: {
       query: client_id
     },
@@ -317,25 +492,25 @@ rekall.clients.render_client_info = function(client_id, selector) {
       // There should be some results.
       if (client_info.data.length > 0) {
         $(selector).html(
-            rekall.cell_renderers.generic_json_renderer(client_info.data[0]));
+            rekall.cell_renderers.generic_json_renderer(
+                client_info.data[0]));
       }
     },
     error: rekall.utils.error,
-  });
+  }));
 }
-
 
 rekall.clients.search_clients = function (query, selector) {
   var dataset_cache = {}
 
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api('/client/search'),
+    ajax: rekall.utils.call({
+      api: '/client/search',
       data: {
         query: query
       },
       error: rekall.utils.error,
-    },
+    }),
     columns: [
       {
         title: "Flows",
@@ -343,8 +518,9 @@ rekall.clients.search_clients = function (query, selector) {
         searchable: false,
         orderable: false,
         render: function(client_id, type, row, meta) {
-          var link = $("<a>");
-          link.attr("href", rekall.globals.controllers.inspect_list + "?" + $.param({
+          var link = $("<a class='link'>");
+          link.attr("href", rekall.globals.controllers.inspect_list +
+              "?" + $.param({
             client_id: client_id}));
           var img = $("<img class='icon'>");
           img.attr("src", rekall.globals.image_dir + 'launch-icon.png');
@@ -394,8 +570,8 @@ rekall.clients.search_clients = function (query, selector) {
 
 // Pops the client info in a modal box.
 rekall.clients.show_info = function(client_id) {
-  $.ajax({
-    url: rekall.utils.api('/client/search'),
+  $.ajax(rekall.utils.call({
+    api: '/client/search',
     data: {
       query: client_id
     },
@@ -411,17 +587,16 @@ rekall.clients.show_info = function(client_id) {
       }
     },
     error: rekall.utils.error,
-  });
+  }));
 }
-
 
 
 rekall.flows = {}
 rekall.flows.list_plugins = function(launch_url, client_id, selector) {
   $(selector).DataTable( {
-    ajax: {
-      url: rekall.utils.api("/plugin/list"),
-    },
+    ajax: rekall.utils.call({
+      api: "/plugin/list",
+    }),
     columns: [
       {
         data: "plugin",
@@ -429,7 +604,7 @@ rekall.flows.list_plugins = function(launch_url, client_id, selector) {
         render: function (plugin, type, full, meta) {
           var img = $("<img class='icon'>");
           img.attr("src", rekall.globals.image_dir + 'launch-icon.png');
-          var link = $("<a>");
+          var link = $("<a class='link'>");
           link.append(img);
           link.attr("href", launch_url + "?" + $.param({
             plugin: plugin,
@@ -459,26 +634,28 @@ rekall.flows.list_plugins = function(launch_url, client_id, selector) {
   $(selector).on("click", ".collection_cell_rich.plugin", function (){
     var plugin = $(this).text();
 
-    $.getJSON(rekall.utils.api("/plugin/get"), {plugin: plugin},
-              function(data) {
-                $("#modalContainer").html(
-                    rekall.templates.modal_template(
-                        rekall.cell_renderers.generic_json_renderer(data),
-                        "Plugin " + plugin,
-                        ));
-                $("#modal").modal("show");
-              });
+    $.ajax(rekall.utils.call({
+      api: "/plugin/get",
+      data: {plugin: plugin},
+      success: function(data) {
+        $("#modalContainer").html(
+            rekall.templates.modal_template(
+                rekall.cell_renderers.generic_json_renderer(data),
+                "Plugin " + plugin,
+                ));
+        $("#modal").modal("show");
+      }
+    }));
   });
 }
-
 
 rekall.flows.list_flows_for_client = function(client_id, selector) {
   var flow_cache = {};
   var status_cache = {};
 
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api("/flows/list"),
+    ajax: rekall.utils.call({
+      api: "/flows/list",
       data: {
         client_id: client_id
       },
@@ -492,12 +669,14 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
         } else {
           rekall.utils.error(jqXHR);
         };
-      }
-    },
+      },
+    }),
+    order: [[ 1, 'desc' ]],
     columns: [
       {
-        title: "",
+        title: '<input id="select_all" type="checkbox">',
         data: "flow",
+        sortable: false,
         render: function(flow, type, row, meta) {
           var checkbox = $('<input name="flow_ids" type="checkbox">');
           checkbox.attr("value", flow.flow_id);
@@ -513,7 +692,10 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
         title: "Flow",
         data: "flow",
         render: function(flow, type, row, meta) {
-          var text = rekall.cell_renderers.flow_summary_renderer(flow);
+          var text = flow.name;
+          if (!text) {
+            text = rekall.cell_renderers.flow_summary_renderer(flow);
+          }
           return rekall.cell_renderers.generic_json_pp(
               flow_cache, text, "flow",
               flow, type, row, meta);
@@ -549,26 +731,187 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
       },
     ],
   });
+
   rekall.cell_renderers.generic_json_pp_clicks(
       flow_cache, "flow", "Flow Information", selector);
 
   rekall.cell_renderers.generic_json_pp_clicks(
       status_cache, "status", "Flow Status", selector,
       rekall.cell_renderers.status_detailed_renderer);
+
+  $("#select_all").click(function() {
+    var state = this.checked;
+    $("input[name=flow_ids]").each(function () {this.checked = state});
+  });
+
+  $("#save").click(function () {
+     rekall.flows.save_flows("#flows", client_id);
+  });
+
+  $("#load").click(function () {
+    $("#modalContainer").html(
+        rekall.templates.modal_template(
+            rekall.templates.load_precanned_flow_template(client_id),
+            "Load a Pre-Canned Flow"));
+    $("#modal").modal("show");
+  });
 }
 
+rekall.flows.save_flows = function(selector, client_id) {
+  var selected_flow_ids = [];
+  $(selector).find("input[name=flow_ids]").each(function () {
+    if (this.checked) selected_flow_ids.push(this.value);
+  });
+
+  if (selected_flow_ids.length == 0) {
+    return;
+  }
+
+  $.ajax(rekall.utils.call({
+    api: "/flows/make_canned",
+    data: {
+      client_id: client_id,
+      flow_ids: selected_flow_ids,
+    },
+    error: rekall.utils.error,
+    success: function(canned_flow) {
+      var form = rekall.templates.save_flows(canned_flow);
+      var submit = $(
+          "<button type='button' class='btn btn-default'>Save</button>");
+      submit.click(function () {
+        canned_flow.name = form.find("#name").val();
+        canned_flow.description = form.find("#description").val();
+        canned_flow.category = form.find("#category").val();
+
+        $.ajax(rekall.utils.call({
+          method: "POST",
+          api: "/flows/save_canned",
+          data: {
+            canned_flow: JSON.stringify(canned_flow),
+          },
+          success: function() {
+            $("#modal").modal("hide");
+          },
+          error: rekall.utils.error_container
+        }));
+      });
+
+      $("#modalContainer").html(
+          rekall.templates.modal_template(form, "Save Flow", submit));
+      $("#modal").modal("show");
+    },
+  }));
+}
+
+rekall.flows.list_canned_flows = function(selector) {
+  $(selector).DataTable({
+    ajax: rekall.utils.call({
+      api: "/flows/list_canned",
+      error: rekall.utils.error,
+    }),
+    columns: [
+      {
+        title: '<input id="select_all" type="checkbox">',
+        data: "name",
+        sortable: false,
+        render: function(name, type, row, meta) {
+          var checkbox = $('<input name="names" type="checkbox">');
+          checkbox.attr("value", name);
+          return checkbox.prop("outerHTML");
+        }
+      },
+      {
+        title: "Category",
+        data: "category"
+      },
+      {
+        title: "Name",
+        data: "name"
+      },
+      {
+        title: "Description",
+        data: "description",
+      },
+    ]
+  });
+
+  $("#select_all").click(function() {
+    var state = this.checked;
+    $("input[name=names]").each(function () {this.checked = state});
+  });
+
+  rekall.utils.watch_checkboxes_to_disabled_button(selector, "#delete");
+
+  $("#delete").click(function() {
+    rekall.flows.delete_canned_flows(selector);
+  });
+}
+
+rekall.flows.delete_canned_flows = function(selector) {
+  var selected_names = [];
+  $(selector).find("input[name=names]").each(function () {
+    if (this.checked) selected_names.push(this.value);
+  });
+
+  $.ajax(rekall.utils.call({
+    api: "/flows/delete_canned",
+    data: {
+      names: selected_names,
+    },
+    error: rekall.utils.error,
+    success: function() {
+      rekall.utils.load(window.location.href);
+    }
+  }));
+}
+
+rekall.flows.export_flows = function(client_id, selector) {
+  var selected_names = [];
+  $(selector).find("input[name=names]").each(function () {
+    if (this.checked) selected_names.push(this.value);
+  });
+
+  $.ajax(rekall.utils.call({
+    api: "/flows/export",
+    data: {
+      names: selected_names,
+    },
+    error: rekall.utils.error,
+    success: function() {
+      rekall.utils.load(window.location.href);
+    }
+  }));
+}
+
+rekall.flows.delete_canned_flows = function(selector) {
+  var selected_names = [];
+  $(selector).find("input[name=names]").each(function () {
+    if (this.checked) selected_names.push(this.value);
+  });
+
+  $.ajax({
+    url: rekall.utils.api("/flows/delete_canned"),
+    data: {
+      names: selected_names,
+    },
+    error: rekall.utils.error,
+    success: function() {
+      rekall.utils.load(window.location.href);
+    }
+  });
+}
 
 rekall.uploads = {}
 rekall.uploads.list_uploads_for_flow = function(flow_id, selector) {
   var file_info_cache = {};
 
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api("/uploads/list"),
+    ajax: rekall.utils.call({
+      api: "/uploads/list",
       data: {
         flow_id: flow_id
       }
-    },
+    }),
     columns: [
       {
         title: "filename",
@@ -611,7 +954,6 @@ rekall.uploads.list_uploads_for_flow = function(flow_id, selector) {
       file_info_cache, "finfo", "File Information", selector);
 }
 
-
 rekall.uploads.hex_view = function(upload_id, selector) {
   var width = 32;
   var height = 200;
@@ -629,7 +971,8 @@ rekall.uploads.hex_view = function(upload_id, selector) {
     processData: false,
     success: function(result, textStatus, request){
       var content_range = request.getResponseHeader('Content-Range');
-      var match = new RegExp(".+([0-9]+)-([0-9]+)/([0-9]+)$").exec(content_range || "");
+      var match = new RegExp(".+([0-9]+)-([0-9]+)/([0-9]+)$").exec(
+          content_range || "");
       if (match) {
         var start = parseInt(match[1]);
         var end = parseInt(match[2]);
@@ -669,7 +1012,6 @@ rekall.uploads.hex_view = function(upload_id, selector) {
     }
   });
 }
-
 
 // Cell renderers for DataTables
 rekall.cell_renderers = {}
@@ -827,7 +1169,7 @@ rekall.cell_renderers.collection_ids_renderer = function(
 rekall.cell_renderers.notification_message = function(
     message_id, type, row, meta) {
   if (message_id == "APPROVAL_REQUEST") {
-    var result = $("<div>Please <a>approve</a> client <b></b>.</div>");
+    var result = $("<div>Please <a class='link'>approve</a> client <b></b>.</div>");
     client_id = rekall.utils.get(row.args, "client_id", "");
     user = rekall.utils.get(row.args, "user", "");
     role = rekall.utils.get(row.args, "role", "");
@@ -846,8 +1188,6 @@ rekall.cell_renderers.notification_message = function(
   return rekall.utils.safe_html(message_id);
 }
 
-
-
 // User management.
 rekall.users = {}
 
@@ -856,10 +1196,10 @@ rekall.users.list_users = function (selector) {
   var roles_cache = {};
 
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api("/users/list"),
+    ajax: rekall.utils.call({
+      api: "/users/list",
       error: rekall.utils.error,
-    },
+    }),
     columns: [
       {
         title: "",
@@ -903,10 +1243,10 @@ rekall.users.list_users = function (selector) {
       "Role Description",
       selector,
       function (role) {
-        return {
-          url: rekall.utils.api("/users/roles/get"),
+        return rekall.utils.call({
+          api: "/users/roles/get",
           data: {role: role}
-        }
+        })
       });
 }
 
@@ -918,8 +1258,8 @@ rekall.users.remove_users = function(selector) {
     var self = $(this);
     if (this.checked) {
       counter++;
-      $.ajax({
-        url: rekall.utils.api("/users/delete"),
+      $.ajax(rekall.utils.call({
+        api: "/users/delete",
         data: {
           user: self.attr("data-user"),
           resource: self.attr("data-resource"),
@@ -928,10 +1268,10 @@ rekall.users.remove_users = function(selector) {
         success: function() {
           counter--;
           if (counter == 0) {
-            location.reload();
+            rekall.utils.load(window.location.href);
           };
         },
-      });
+      }));
     }
   });
 }
@@ -941,48 +1281,45 @@ rekall.users.show_notifications = function() {
       `<button type="button" class="btn btn-default"
          data-dismiss="modal" id="clear">Clear</button>
       `).on("click", function() {
-        $.ajax({
-          url: rekall.utils.api("/users/notifications/clear"),
+        $.ajax(rekall.utils.call({
+          api: "/users/notifications/clear",
           error: function() {}, // Ignore errors.
           success: function() {},
-        });
+        }));
       });
 
   var table = rekall.templates.modal_template(
       '<table class="display" cellspacing="0" width="80%"></table>',
       "Notifications", button);
   table.find("table").DataTable({
-       ajax: {
-         url: rekall.utils.api("/users/notifications/read"),
-       },
-       columns: [
-         {
-           title: "From",
-           data: "from_user"
-         },
-         {
-           title: "Timestamp",
-           data: "timestamp",
-         },
-         {
-           title: "Message",
-           data: "message_id",
-           render: rekall.cell_renderers.notification_message,
-         }
-       ]
-     });
+    ajax: rekall.utils.call({
+      api: "/users/notifications/read",
+    }),
+    columns: [
+      {
+        title: "From",
+        data: "from_user"
+      },
+      {
+        title: "Timestamp",
+        data: "timestamp",
+      },
+      {
+        title: "Message",
+        data: "message_id",
+        render: rekall.cell_renderers.notification_message,
+      }
+    ]
+  });
 
   $("#modalContainer").html(table);
   $("#modal").modal("show");
 }
 
-
-
 rekall.collections = {}
 rekall.collections.build_table_from_collection = function (
     client_id, collection_id, selector) {
-  $.ajax({
-    dataType: "json",
+  $.ajax(rekall.utils.call({
     xhr: function() {
       var xhr = new window.XMLHttpRequest();
       xhr.addEventListener("progress", function(evt){
@@ -996,7 +1333,7 @@ rekall.collections.build_table_from_collection = function (
 
       return xhr;
     },
-    url: rekall.utils.api("/collections/get"),
+    api: "/collections/get",
     data: {
       client_id: client_id,
       collection_id: collection_id,
@@ -1063,7 +1400,12 @@ rekall.collections.build_table_from_collection = function (
 
         var dataset = data.table_data[table.name];
         var data_table = $(table_dom).DataTable({
-          dom: '<"top"ifp<"clear">>rt<"bottom"lp<"clear">>',
+          //dom: '<"top"ifp<"clear">>rt<"bottom"lp<"clear">>',
+          dom: 'Bfrtlip',
+          buttons: [
+            'copy', 'csv', 'excel', 'pdf', 'print'
+          ],
+
           data: dataset,
           columns: columns,
           deferRender: false,
@@ -1086,14 +1428,13 @@ rekall.collections.build_table_from_collection = function (
 
       $("#progressbar").hide();
     }
-  });
+  }));
 }
 
 rekall.collections.describe_collection = function(
     client_id, collection_id, callback) {
-  $.ajax({
-    dataType: "json",
-    url: rekall.utils.api('/collections/metadata'),
+  $.ajax(rekall.utils.call({
+    api: '/collections/metadata',
     data: {
       collection_id: collection_id,
       client_id: client_id
@@ -1101,10 +1442,8 @@ rekall.collections.describe_collection = function(
     success: function(metadata) {
       callback(rekall.cell_renderers.flow_summary_renderer(metadata.flow));
     }
-  });
+  }));
 }
-
-
 
 
 // Hexviewer developed using information from:
@@ -1156,3 +1495,30 @@ $.ajaxTransport("+binary", function(options, originalOptions, jqXHR){
     };
   }
 });
+
+window.onpopstate = function(event) {
+  if (event.state) {
+    console.log(event.currentTarget.location.href);
+    var data = event.state.data;
+    var method = event.state.method || "GET";
+
+    // Deliberately do not replay POST data.
+    if (method == "POST") {
+      data = {},
+      method = "GET"
+    }
+
+    $.ajax({
+      url: event.state.url,
+      method: method,
+      data: data,
+      headers: {
+        "x-rekall-bare-layout": 1,
+      },
+      success: function(data) {
+        $("#main").html(data);
+      }
+    });
+    event.preventDefault();
+  }
+}

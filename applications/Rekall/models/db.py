@@ -4,16 +4,14 @@
 # This scaffolding model makes your app work on Google App Engine too
 # File is released under public domain and you can use without limitations
 # -------------------------------------------------------------------------
-from gluon.globals import current
 import datetime
+import uuid
+
+from gluon.globals import current
 
 from api import dal
 from rekall_lib.types import agent
 from rekall_lib.types import artifacts
-
-
-if request.global_settings.web2py_version < "2.14.1":
-    raise HTTP(500, "Requires web2py 2.13.3 or newer")
 
 # -------------------------------------------------------------------------
 # if SSL/HTTPS is properly configured and you want all HTTP requests to
@@ -31,29 +29,22 @@ from gluon.contrib.appconfig import AppConfig
 # -------------------------------------------------------------------------
 myconf = AppConfig(reload=True)
 
+# In future we might support other environments but for now we must run on
+# AppEngine due to user auth restrictions.
 if not request.env.web2py_runtime_gae:
-    # ---------------------------------------------------------------------
-    # if NOT running on Google App Engine use SQLite or other DB
-    # ---------------------------------------------------------------------
-    db = DAL(myconf.get('db.uri'),
-             pool_size=myconf.get('db.pool_size'),
-             migrate_enabled=myconf.get('db.migrate'),
-             check_reserved=['all'])
-else:
-    # ---------------------------------------------------------------------
-    # connect to Google BigTable (optional 'google:datastore://namespace')
-    # ---------------------------------------------------------------------
-    db = DAL('google:datastore+ndb')
-    # ---------------------------------------------------------------------
-    # store sessions and tickets there
-    # ---------------------------------------------------------------------
-    session.connect(request, response, db=db)
-    # ---------------------------------------------------------------------
-    # or store session in Memcache, Redis, etc.
-    # from gluon.contrib.memdb import MEMDB
-    # from google.appengine.api.memcache import Client
-    # session.connect(request, response, db = MEMDB(Client()))
-    # ---------------------------------------------------------------------
+    raise RuntimeError(
+        "Rekall is designed to run only on the AppEngine framework.")
+
+db = DAL('google:datastore+ndb')
+
+# We could use memcache for the session, but we dont use the session for much,
+# so we might as well just use cookie based sessions.
+session.connect(request, response, cookie_key="session_key",
+                compression_level=5)
+
+# Set a CSRF token in the session cookie.
+if not session.csrf_token:
+    session.csrf_token = str(uuid.uuid4())
 
 # -------------------------------------------------------------------------
 # by default give a view/generic.extension to all actions from localhost
@@ -206,4 +197,15 @@ db.define_table("artifacts",
                 Field("artifact_text",
                       comment="The raw text of the artifact."),
 
+                )
+
+db.define_table("canned_flows",
+                Field("name", unique=True, notnull=True,
+                      comment="The unique name of the canned flow"),
+                Field("description",
+                      comment="A description of the canned flow"),
+                Field("category",
+                      comment="A category for this canned flow"),
+                Field("flow", type=dal.SerializerType(agent.CannedFlow),
+                      comment="The canned flow"),
                 )

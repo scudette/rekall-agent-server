@@ -23,6 +23,7 @@ def build_form(inputs, **kwargs):
             html.DIV(input, _class="col-sm-7"),
             _class="form-group"))
 
-    elements.append(html.INPUT(_type="submit"))
+    elements.append(html.INPUT(_type="submit", _role="button",
+                               _class="btn btn-default"))
 
     return html.FORM(*elements, _class="form-horizontal", **kwargs)

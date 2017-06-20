@@ -2,11 +2,11 @@
 import json
 
 from api import users
-import gluon
+
 
 def search(current, query=None):
     if not query:
-        raise gluon.HTTP(400, "query must be provided.")
+        raise ValueError("query must be provided.")
 
     query = query.strip()
     condition = current.db.clients.id > 0

@@ -1,4 +1,28 @@
-{{extend 'layout.html'}}
+{{extend response.layout_path}}
 
 <h2>Search clients</h2>
-{{=form}}
+<form action="#" method="GET">
+  <div class="col-lg-6">
+    <div class="input-group">
+      <span class="input-group-btn">
+        <button class="btn btn-default" type="button" id="go">Go!</button>
+      </span>
+      <input type="text" class="form-control" name="q" placeholder="Search for...">
+    </div><!-- /input-group -->
+  </div><!-- /.col-lg-6 -->
+</form>
+
+<script>
+    var handler = function(event) {
+      if ($("input[name=q]").val()) {
+        rekall.utils.submit_form({
+          url: rekall.globals.controllers.client_search
+        });
+      }
+
+      event.preventDefault();
+      return true;
+    };
+$("form").submit(handler);
+$("#go").click(handler);
+</script>

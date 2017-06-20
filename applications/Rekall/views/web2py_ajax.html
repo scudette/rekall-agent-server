@@ -13,12 +13,15 @@
   // Rekall JavaScript namespaces setups.
   rekall = {};
 
+  rekall.csrf_token = "{{=session.csrf_token}}";
+
   // Globals to be shared between all the users.
   rekall.globals = {
     image_dir: "{{=URL('static', 'images')}}/",
 
     // Global location of various controllers.
     controllers: {
+      client_search: "{{=URL(c='clients', f='search')}}",
       collection_view: "{{=URL(c='flows', f='collection_view')}}",
       download: "{{=URL(c='flows', f='download')}}",
       uploads_view: "{{=URL(c='flows', f='uploads_view')}}",
@@ -28,6 +31,7 @@
       approve_request: "{{=URL(c='clients', f='approve_request')}}",
       inspect_list: "{{=URL(c='flows', f='inspect_list')}}",
       artifact_list: "{{=URL(c='artifacts', f='index')}}",
+      save_flow: "{{=URL(c='flows', f='save')}}",
     },
 
     api_route: "{{=URL(c='api', f='run', host=True)}}",
@@ -36,13 +40,19 @@
 
 
 {{
-response.files.insert(0,URL('static','js/jquery.js'))
-response.files.insert(1,URL('static','css/calendar.css'))
-response.files.insert(1,URL('static','css/rekall.css'))
-response.files.insert(2,URL('static','js/calendar.js'))
-response.files.insert(3,URL('static','js/web2py.js'))
-response.files.insert(3,URL('static','js/rekall.js'))
-response.files.insert(3,URL('static','js/jq-ajax-progress.js'))
+response.files.append(URL('static','js/jquery.js'))
+response.files.append(URL('static','css/calendar.css'))
+response.files.append(URL('static','css/rekall.css'))
+response.files.append(URL('static','js/calendar.js'))
+response.files.append(URL('static','js/web2py.js'))
+response.files.append(URL('static','js/rekall.js'))
+response.files.append(URL('static','js/jq-ajax-progress.js'))
+response.files.append(URL('static','js/dataTables/datatables.min.css'))
+response.files.append(URL('static','js/dataTables/DataTables-1.10.15/css/jquery.dataTables.min.css'))
+response.files.append(URL('static','js/dataTables/datatables.min.js'))
+response.files.append(URL('static','js/bootstrap.min.js'))
+response.files.append(URL('static','js/web2py-bootstrap3.js'))
+
 response.include_meta()
 response.include_files()
 }}

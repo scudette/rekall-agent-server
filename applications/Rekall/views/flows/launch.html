@@ -1,4 +1,4 @@
-{{extend 'layout.html'}}
+{{extend response.layout_path}}
 
 {{if error: }}
   <div id="error" style="display: none">
@@ -54,3 +54,15 @@
   </form>
 
 </div>
+
+<script>
+    $("input[type=submit]").click(function (event) {
+      rekall.utils.submit_form({
+        next: rekall.globals.controllers.inspect_list,
+        data: {
+          client_id: "{{=client_id}}",
+        }
+      });
+      event.preventDefault();
+    });
+</script>

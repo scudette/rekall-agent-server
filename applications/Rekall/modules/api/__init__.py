@@ -24,13 +24,22 @@ class MethodDesc(object):
         self.args = args
         self.doc = doc
         if args_desc is None:
-            args_desc =dict((x, "") for x in args)
+            args_desc = dict((x, "") for x in args)
 
         self.args_desc = args_desc
 
+    def convert_to_arrays(self, kwargs):
+        """Web2py does not properly convert jquery's array notation."""
+        for k in list(kwargs):
+            if k.endswith("[]"):
+                v = kwargs.pop(k)
+                if isinstance(v, basestring):
+                    v = [v]
+                kwargs[k[:-2]] = v
+        return kwargs
 
     def run(self, current, args, kwargs):
-        return self.method(current, args, kwargs)
+        return self.method(current, args, self.convert_to_arrays(kwargs))
 
 
 class APIDispatcher(object):
@@ -90,6 +99,7 @@ class APIDispatcher(object):
         self.methods.append(("/".join(prefix_components), desc))
 
     def call(self, current, api_method, *args, **kwargs):
+        """This method is used for making internal API calls."""
         sep = "/" if "/" in api_method else "."
         call_args = [x for x in api_method.split(sep) if x]
         container = api_dispatcher.dispatch
@@ -226,6 +236,21 @@ api_dispatcher.register("/collections/get", collections.get,
 # Deal with flows. Must have at least Examiner access to the client.
 api_dispatcher.register("/flows/list", flows.list,
                         users.require_client("clients.view"))
+
+api_dispatcher.register("/flows/make_canned", flows.make_canned_flow,
+                        users.require_client("clients.view"))
+
+api_dispatcher.register("/flows/save_canned", flows.save_canned_flow,
+                        users.require_application("canned_flow.write"))
+
+api_dispatcher.register("/flows/delete_canned", flows.delete_canned_flows,
+                        users.require_application("canned_flow.write"))
+
+api_dispatcher.register("/flows/list_canned", flows.list_canned_flows,
+                        users.require_application("canned_flow.read"))
+
+api_dispatcher.register("/flows/launch_canned", flows.launch_canned_flows,
+                        users.require_client("flows.create"))
 
 # Only users with Investigator role can create new flows on the client.
 api_dispatcher.register("/flows/plugins/launch", flows.launch_plugin_flow,

@@ -48,3 +48,13 @@ pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
 .input-group {
     margin-top: 10px;
 }
+
+button.right-square {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+
+.toolbar {
+    margin-bottom: 10px;
+}

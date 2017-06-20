@@ -1,4 +1,4 @@
-{{extend 'layout.html'}}
+{{extend response.layout_path}}
 
 <div class="panel panel-default">
   <div class="panel-heading">Add New User</div>
@@ -7,3 +7,17 @@
   {{=form}}
 
 </div>
+<script>
+  $("input[type=submit]").click(function (event) {
+    $.ajax({
+      url: rekall.utils.api('/users/add'),
+      data: $("form").serializeArray(),
+      method: "POST",
+      error: rekall.utils.error,
+      success: function () {
+        rekall.utils.load(rekall.globals.controllers.manage_users);
+      }
+    });
+    event.preventDefault();
+  });
+</script>
