@@ -37,12 +37,12 @@ handlers:
   expiration: "365d"
 
 - url: /favicon.ico
-  static_files: applications/welcome/static/favicon.ico
-  upload: applications/welcome/static/favicon.ico
+  static_files: applications/Rekall/static/images/favicon.ico
+  upload: applications/Rekall/static/images/favicon.ico
 
 - url: /robots.txt
-  static_files: applications/welcome/static/robots.txt
-  upload: applications/welcome/static/robots.txt
+  static_files: applications/Rekall/static/robots.txt
+  upload: applications/Rekall/static/robots.txt
 
 - url: .*
   script: gaehandler.wsgiapp    # WSGI (Python 2.7 only)

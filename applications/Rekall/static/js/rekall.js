@@ -16,6 +16,7 @@ rekall.utils.load = function(url, data) {
       if (window.location.href != url) {
         window.history.pushState({url: url}, "", url);
       }
+      $("#modal").modal("hide");
     }
   });
 }
@@ -53,6 +54,25 @@ rekall.utils.submit_form = function(obj) {
 
 rekall.utils.api = function(endpoint) {
   return rekall.globals.api_route + endpoint;
+}
+
+
+// A wrapper around an $.ajax object which modifies the url, adds a common csrf
+// header etc. The returned object should be sent to $.ajax for actual
+// processing.
+rekall.utils.call = function(obj) {
+  return {
+    method: obj.method,
+    xhr: obj.xhr,
+    dataType: "json",
+    url: rekall.utils.api(obj.api),
+    headers: {
+      "x-rekall-csrf-token": rekall.csrf_token
+    },
+    data: obj.data,
+    success: obj.success,
+    error: obj.error
+  };
 }
 
 rekall.utils.escape_text = function(text) {
@@ -96,8 +116,8 @@ rekall.utils.watch_checkboxes_to_disabled_button = function(
 }
 
 rekall.utils.update_badge = function() {
-  $.ajax({
-    url: rekall.utils.api('/users/notifications/count'),
+  rekall.utils.call({
+    api: '/users/notifications/count',
     success: function(count) {
       if (count == 0) count = "";
       $("#notifications").text(count);
@@ -244,8 +264,8 @@ rekall.templates.mint_token = function(roles) {
       resource = "/";
     }
 
-    $.ajax({
-      url: rekall.utils.api('/users/tokens/mint'),
+    $.ajax(rekall.utils.call({
+      api: '/users/tokens/mint',
       data: {
         role: role,
         resource: resource,
@@ -257,7 +277,7 @@ rekall.templates.mint_token = function(roles) {
         $("#token").val(jqXHR.responseJSON.error).show().addClass(
             "alert-danger");
       },
-    });
+    }));
   });
 
   return rekall.templates.modal_template(result, "Mint Access Token");
@@ -315,10 +335,10 @@ rekall.templates.load_precanned_flow_template = function(client_id) {
 `).append(rekall.templates.error_message_container());
 
   table.find("#canned").DataTable({
-    ajax: {
-      url: rekall.utils.api("/flows/list_canned"),
+    ajax: rekall.utils.call({
+      api: "/flows/list_canned",
       error: rekall.utils.error,
-    },
+    }),
     columns: [
       {
         title: '',
@@ -350,8 +370,8 @@ rekall.templates.load_precanned_flow_template = function(client_id) {
   });
 
   table.on("click", "a[data-name]", function() {
-    $.ajax({
-      url: rekall.utils.api("/flows/launch_canned"),
+    $.ajax(rekall.utils.call({
+      api: "/flows/launch_canned",
       data: {
         client_id: client_id,
         name: $(this).data("name"),
@@ -361,7 +381,7 @@ rekall.templates.load_precanned_flow_template = function(client_id) {
         rekall.utils.load(window.location.href);
         $("#modal").modal("hide");
       }
-    });
+    }));
   });
 
   return table;
@@ -370,9 +390,9 @@ rekall.templates.load_precanned_flow_template = function(client_id) {
 rekall.api = {}
 rekall.api.list = function(selector) {
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api('/list'),
-    },
+    ajax: rekall.utils.call({
+      api: '/list',
+    }),
     columns: [
       {
         title: "Method",
@@ -405,13 +425,13 @@ rekall.api.list = function(selector) {
 }
 
 rekall.api.mint_token = function() {
-  $.ajax({
-    url: rekall.utils.api('/users/roles/list'),
+  $.ajax(rekall.utils.call({
+    api: '/users/roles/list',
     success: function(roles) {
       $("#modalContainer").html(rekall.templates.mint_token(roles));
       $("#modal").modal("show");
     }
-  });
+  }));
 }
 
 rekall.artifacts = {}
@@ -420,10 +440,10 @@ rekall.artifacts.list = function(selector) {
   var dataset = {};
 
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api('/artifacts/list'),
+    ajax: rekall.utils.call({
+      api: '/artifacts/list',
       error: rekall.utils.error,
-    },
+    }),
     columns: [
       {
         title: "Artifact",
@@ -446,9 +466,9 @@ rekall.artifacts.list = function(selector) {
 }
 
 rekall.artifacts.upload = function(artifact) {
-  $.ajax({
+  $.ajax(rekall.utils.call({
     method: "POST",
-    url: rekall.utils.api('/artifacts/add'),
+    api: '/artifacts/add',
     data: {
       artifact: artifact
     },
@@ -456,15 +476,15 @@ rekall.artifacts.upload = function(artifact) {
     success: function() {
       rekall.utils.load(rekall.globals.controllers.artifact_list);
     }
-  });
+  }));
 }
 
 // Client controller.
 rekall.clients = {}
 
 rekall.clients.render_client_info = function(client_id, selector) {
-  $.ajax({
-    url: rekall.utils.api('/client/search'),
+  $.ajax(rekall.utils.call({
+    api: '/client/search',
     data: {
       query: client_id
     },
@@ -477,20 +497,20 @@ rekall.clients.render_client_info = function(client_id, selector) {
       }
     },
     error: rekall.utils.error,
-  });
+  }));
 }
 
 rekall.clients.search_clients = function (query, selector) {
   var dataset_cache = {}
 
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api('/client/search'),
+    ajax: rekall.utils.call({
+      api: '/client/search',
       data: {
         query: query
       },
       error: rekall.utils.error,
-    },
+    }),
     columns: [
       {
         title: "Flows",
@@ -550,8 +570,8 @@ rekall.clients.search_clients = function (query, selector) {
 
 // Pops the client info in a modal box.
 rekall.clients.show_info = function(client_id) {
-  $.ajax({
-    url: rekall.utils.api('/client/search'),
+  $.ajax(rekall.utils.call({
+    api: '/client/search',
     data: {
       query: client_id
     },
@@ -567,16 +587,16 @@ rekall.clients.show_info = function(client_id) {
       }
     },
     error: rekall.utils.error,
-  });
+  }));
 }
 
 
 rekall.flows = {}
 rekall.flows.list_plugins = function(launch_url, client_id, selector) {
   $(selector).DataTable( {
-    ajax: {
-      url: rekall.utils.api("/plugin/list"),
-    },
+    ajax: rekall.utils.call({
+      api: "/plugin/list",
+    }),
     columns: [
       {
         data: "plugin",
@@ -614,15 +634,18 @@ rekall.flows.list_plugins = function(launch_url, client_id, selector) {
   $(selector).on("click", ".collection_cell_rich.plugin", function (){
     var plugin = $(this).text();
 
-    $.getJSON(rekall.utils.api("/plugin/get"), {plugin: plugin},
-              function(data) {
-                $("#modalContainer").html(
-                    rekall.templates.modal_template(
-                        rekall.cell_renderers.generic_json_renderer(data),
-                        "Plugin " + plugin,
-                        ));
-                $("#modal").modal("show");
-              });
+    $.ajax(rekall.utils.call({
+      api: "/plugin/get",
+      data: {plugin: plugin},
+      success: function(data) {
+        $("#modalContainer").html(
+            rekall.templates.modal_template(
+                rekall.cell_renderers.generic_json_renderer(data),
+                "Plugin " + plugin,
+                ));
+        $("#modal").modal("show");
+      }
+    }));
   });
 }
 
@@ -631,8 +654,8 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
   var status_cache = {};
 
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api("/flows/list"),
+    ajax: rekall.utils.call({
+      api: "/flows/list",
       data: {
         client_id: client_id
       },
@@ -647,7 +670,7 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
           rekall.utils.error(jqXHR);
         };
       },
-    },
+    }),
     order: [[ 1, 'desc' ]],
     columns: [
       {
@@ -744,8 +767,8 @@ rekall.flows.save_flows = function(selector, client_id) {
     return;
   }
 
-  $.ajax({
-    url: rekall.utils.api("/flows/make_canned"),
+  $.ajax(rekall.utils.call({
+    api: "/flows/make_canned",
     data: {
       client_id: client_id,
       flow_ids: selected_flow_ids,
@@ -760,9 +783,9 @@ rekall.flows.save_flows = function(selector, client_id) {
         canned_flow.description = form.find("#description").val();
         canned_flow.category = form.find("#category").val();
 
-        $.ajax({
+        $.ajax(rekall.utils.call({
           method: "POST",
-          url: rekall.utils.api("/flows/save_canned"),
+          api: "/flows/save_canned",
           data: {
             canned_flow: JSON.stringify(canned_flow),
           },
@@ -770,22 +793,22 @@ rekall.flows.save_flows = function(selector, client_id) {
             $("#modal").modal("hide");
           },
           error: rekall.utils.error_container
-        });
+        }));
       });
 
       $("#modalContainer").html(
           rekall.templates.modal_template(form, "Save Flow", submit));
       $("#modal").modal("show");
     },
-  });
+  }));
 }
 
 rekall.flows.list_canned_flows = function(selector) {
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api("/flows/list_canned"),
+    ajax: rekall.utils.call({
+      api: "/flows/list_canned",
       error: rekall.utils.error,
-    },
+    }),
     columns: [
       {
         title: '<input id="select_all" type="checkbox">',
@@ -830,6 +853,42 @@ rekall.flows.delete_canned_flows = function(selector) {
     if (this.checked) selected_names.push(this.value);
   });
 
+  $.ajax(rekall.utils.call({
+    api: "/flows/delete_canned",
+    data: {
+      names: selected_names,
+    },
+    error: rekall.utils.error,
+    success: function() {
+      rekall.utils.load(window.location.href);
+    }
+  }));
+}
+
+rekall.flows.export_flows = function(client_id, selector) {
+  var selected_names = [];
+  $(selector).find("input[name=names]").each(function () {
+    if (this.checked) selected_names.push(this.value);
+  });
+
+  $.ajax(rekall.utils.call({
+    api: "/flows/export",
+    data: {
+      names: selected_names,
+    },
+    error: rekall.utils.error,
+    success: function() {
+      rekall.utils.load(window.location.href);
+    }
+  }));
+}
+
+rekall.flows.delete_canned_flows = function(selector) {
+  var selected_names = [];
+  $(selector).find("input[name=names]").each(function () {
+    if (this.checked) selected_names.push(this.value);
+  });
+
   $.ajax({
     url: rekall.utils.api("/flows/delete_canned"),
     data: {
@@ -847,12 +906,12 @@ rekall.uploads.list_uploads_for_flow = function(flow_id, selector) {
   var file_info_cache = {};
 
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api("/uploads/list"),
+    ajax: rekall.utils.call({
+      api: "/uploads/list",
       data: {
         flow_id: flow_id
       }
-    },
+    }),
     columns: [
       {
         title: "filename",
@@ -1110,7 +1169,7 @@ rekall.cell_renderers.collection_ids_renderer = function(
 rekall.cell_renderers.notification_message = function(
     message_id, type, row, meta) {
   if (message_id == "APPROVAL_REQUEST") {
-    var result = $("<div>Please <a>approve</a> client <b></b>.</div>");
+    var result = $("<div>Please <a class='link'>approve</a> client <b></b>.</div>");
     client_id = rekall.utils.get(row.args, "client_id", "");
     user = rekall.utils.get(row.args, "user", "");
     role = rekall.utils.get(row.args, "role", "");
@@ -1137,10 +1196,10 @@ rekall.users.list_users = function (selector) {
   var roles_cache = {};
 
   $(selector).DataTable({
-    ajax: {
-      url: rekall.utils.api("/users/list"),
+    ajax: rekall.utils.call({
+      api: "/users/list",
       error: rekall.utils.error,
-    },
+    }),
     columns: [
       {
         title: "",
@@ -1184,10 +1243,10 @@ rekall.users.list_users = function (selector) {
       "Role Description",
       selector,
       function (role) {
-        return {
-          url: rekall.utils.api("/users/roles/get"),
+        return rekall.utils.call({
+          api: "/users/roles/get",
           data: {role: role}
-        }
+        })
       });
 }
 
@@ -1199,8 +1258,8 @@ rekall.users.remove_users = function(selector) {
     var self = $(this);
     if (this.checked) {
       counter++;
-      $.ajax({
-        url: rekall.utils.api("/users/delete"),
+      $.ajax(rekall.utils.call({
+        api: "/users/delete",
         data: {
           user: self.attr("data-user"),
           resource: self.attr("data-resource"),
@@ -1212,7 +1271,7 @@ rekall.users.remove_users = function(selector) {
             rekall.utils.load(window.location.href);
           };
         },
-      });
+      }));
     }
   });
 }
@@ -1222,36 +1281,36 @@ rekall.users.show_notifications = function() {
       `<button type="button" class="btn btn-default"
          data-dismiss="modal" id="clear">Clear</button>
       `).on("click", function() {
-        $.ajax({
-          url: rekall.utils.api("/users/notifications/clear"),
+        $.ajax(rekall.utils.call({
+          api: "/users/notifications/clear",
           error: function() {}, // Ignore errors.
           success: function() {},
-        });
+        }));
       });
 
   var table = rekall.templates.modal_template(
       '<table class="display" cellspacing="0" width="80%"></table>',
       "Notifications", button);
   table.find("table").DataTable({
-       ajax: {
-         url: rekall.utils.api("/users/notifications/read"),
-       },
-       columns: [
-         {
-           title: "From",
-           data: "from_user"
-         },
-         {
-           title: "Timestamp",
-           data: "timestamp",
-         },
-         {
-           title: "Message",
-           data: "message_id",
-           render: rekall.cell_renderers.notification_message,
-         }
-       ]
-     });
+    ajax: rekall.utils.call({
+      api: "/users/notifications/read",
+    }),
+    columns: [
+      {
+        title: "From",
+        data: "from_user"
+      },
+      {
+        title: "Timestamp",
+        data: "timestamp",
+      },
+      {
+        title: "Message",
+        data: "message_id",
+        render: rekall.cell_renderers.notification_message,
+      }
+    ]
+  });
 
   $("#modalContainer").html(table);
   $("#modal").modal("show");
@@ -1260,8 +1319,7 @@ rekall.users.show_notifications = function() {
 rekall.collections = {}
 rekall.collections.build_table_from_collection = function (
     client_id, collection_id, selector) {
-  $.ajax({
-    dataType: "json",
+  $.ajax(rekall.utils.call({
     xhr: function() {
       var xhr = new window.XMLHttpRequest();
       xhr.addEventListener("progress", function(evt){
@@ -1275,7 +1333,7 @@ rekall.collections.build_table_from_collection = function (
 
       return xhr;
     },
-    url: rekall.utils.api("/collections/get"),
+    api: "/collections/get",
     data: {
       client_id: client_id,
       collection_id: collection_id,
@@ -1370,14 +1428,13 @@ rekall.collections.build_table_from_collection = function (
 
       $("#progressbar").hide();
     }
-  });
+  }));
 }
 
 rekall.collections.describe_collection = function(
     client_id, collection_id, callback) {
-  $.ajax({
-    dataType: "json",
-    url: rekall.utils.api('/collections/metadata'),
+  $.ajax(rekall.utils.call({
+    api: '/collections/metadata',
     data: {
       collection_id: collection_id,
       client_id: client_id
@@ -1385,7 +1442,7 @@ rekall.collections.describe_collection = function(
     success: function(metadata) {
       callback(rekall.cell_renderers.flow_summary_renderer(metadata.flow));
     }
-  });
+  }));
 }
 
 

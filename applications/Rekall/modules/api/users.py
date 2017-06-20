@@ -63,12 +63,18 @@ def check_permission(current, permission, resource, user=None,
     which deploys it will be granted AppEngine Admin by the platform, and this
     allows them to add other users to application roles.
     """
-    # Check with token.
+    # Check with token. Note that token access is not CSRF protected because
+    # token access is used for non-browser, scripted access (e.g. using curl or
+    # wget).
     token = current.request.vars.token
-    if with_tokens and token and check_permission_with_token(
-        current, permission, resource, token):
-        current.request.token = token
-        return True
+    if with_tokens and token:
+        if check_permission_with_token(
+            current, permission, resource, token):
+            current.request.token = token
+            return True
+
+        # User presented a token but it was invalid.
+        return False
 
     db = current.db
     if user is None:

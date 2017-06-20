@@ -13,10 +13,15 @@
 </form>
 
 <script>
-    var handler = function() {
-      rekall.utils.submit_form({
-        url: rekall.globals.controllers.client_search
-      });
+    var handler = function(event) {
+      if ($("input[name=q]").val()) {
+        rekall.utils.submit_form({
+          url: rekall.globals.controllers.client_search
+        });
+      }
+
+      event.preventDefault();
+      return true;
     };
 $("form").submit(handler);
 $("#go").click(handler);

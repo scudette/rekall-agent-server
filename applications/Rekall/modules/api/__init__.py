@@ -99,6 +99,7 @@ class APIDispatcher(object):
         self.methods.append(("/".join(prefix_components), desc))
 
     def call(self, current, api_method, *args, **kwargs):
+        """This method is used for making internal API calls."""
         sep = "/" if "/" in api_method else "."
         call_args = [x for x in api_method.split(sep) if x]
         container = api_dispatcher.dispatch

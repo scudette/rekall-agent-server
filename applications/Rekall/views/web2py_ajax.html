@@ -13,6 +13,8 @@
   // Rekall JavaScript namespaces setups.
   rekall = {};
 
+  rekall.csrf_token = "{{=session.csrf_token}}";
+
   // Globals to be shared between all the users.
   rekall.globals = {
     image_dir: "{{=URL('static', 'images')}}/",
