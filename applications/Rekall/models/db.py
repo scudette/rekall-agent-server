@@ -207,3 +207,14 @@ db.define_table("artifacts",
                       comment="The raw text of the artifact."),
 
                 )
+
+db.define_table("canned_flows",
+                Field("name", unique=True, notnull=True,
+                      comment="The unique name of the canned flow"),
+                Field("description",
+                      comment="A description of the canned flow"),
+                Field("category",
+                      comment="A category for this canned flow"),
+                Field("flow", type=dal.SerializerType(agent.CannedFlow),
+                      comment="The canned flow"),
+                )

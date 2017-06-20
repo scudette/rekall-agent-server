@@ -1,0 +1,16 @@
+{{extend response.layout_path}}
+
+<div class="btn-group toolbar" role="toolbar" aria-label="toolbar">
+  <button type="button" class="btn btn-default disabled" id="delete">
+    <span class="glyphicon glyphicon-trash" aria-hidden="true"
+          title="Delete Canned Flows"></span>&nbsp;
+  </button>
+</div>
+
+<div class="table-container">
+  <table id="canned" class="display" cellspacing="0" width="100%"></table>
+</div>
+
+<script>
+  rekall.flows.list_canned_flows("#canned");
+</script>

@@ -5,11 +5,7 @@ from google.appengine.api import users as gae_users
 
 
 def index():
-    form = FORM(INPUT(_name='q'), INPUT(_type='submit'))
-    if form.accepts(request, session):
-        redirect(URL(c="clients", f="index", vars=dict(q=form.vars.q)))
-
-    return dict(form=form)
+    return dict()
 
 
 def logout():

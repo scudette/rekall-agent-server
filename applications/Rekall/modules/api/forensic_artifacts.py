@@ -62,29 +62,26 @@ def add(current, artifact):
         decoded_artifacts.append((decoded_artifact, snippet))
 
     for decoded_artifact, artifact_text in decoded_artifacts:
-        try:
-            artifact_reader = reader.YamlArtifactsReader()
-            definition = artifact_reader.ReadArtifactDefinitionValues(
-                decoded_artifact.to_primitive(False))
-            if is_definition_in_db(current, definition.name):
-                raise TypeError("Artifact name %s already in database." %
-                                definition.name)
+        artifact_reader = reader.YamlArtifactsReader()
+        definition = artifact_reader.ReadArtifactDefinitionValues(
+            decoded_artifact.to_primitive(False))
+        if is_definition_in_db(current, definition.name):
+            raise ValueError("Artifact name %s already in database." %
+                             definition.name)
 
-            for source in definition.sources:
-                if (source.type_indicator ==
-                    definitions.TYPE_INDICATOR_ARTIFACT_GROUP):
-                    if not is_definition_in_db(current, source):
-                        raise TypeError(
-                            "Artifact group references %s which "
-                            "is not known yet." % source)
+        for source in definition.sources:
+            if (source.type_indicator ==
+                definitions.TYPE_INDICATOR_ARTIFACT_GROUP):
+                if not is_definition_in_db(current, source):
+                    raise ValueError(
+                        "Artifact group references %s which "
+                        "is not known yet." % source)
 
-            db.artifacts.insert(
-                name=decoded_artifact.name,
-                artifact_text=artifact_text,
-                artifact=decoded_artifact)
+        db.artifacts.insert(
+            name=decoded_artifact.name,
+            artifact_text=artifact_text,
+            artifact=decoded_artifact)
 
-        except Exception as e:
-            raise http.HTTP(400, "Error: %s" % e)
 
     return dict()
 

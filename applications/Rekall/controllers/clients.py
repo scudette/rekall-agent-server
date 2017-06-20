@@ -5,10 +5,8 @@ from api import utils
 from gluon.globals import current
 
 
-def index():
-    form = FORM('Search:', INPUT(_name='q'), INPUT(_type='submit'))
-    form.accepts(request, session)
-    return dict(form=form)
+def search():
+    return dict(q=request.vars.q)
 
 
 def request_approval():
