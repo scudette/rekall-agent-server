@@ -5,6 +5,7 @@ import urlparse
 import yaml
 
 from api import types
+from gluon import http
 from google.appengine.api import users
 
 from rekall_lib import crypto
@@ -32,10 +33,10 @@ for role_, permissions in _roles_to_permissions.iteritems():
 permissions = set(_permissions_to_roles)
 
 
-class PermissionDenied(Exception):
+class PermissionDenied(http.HTTP):
     """Raised for unauthorized errors."""
     def __init__(self, permission="", resource=""):
-        super(PermissionDenied, self).__init__()
+        super(PermissionDenied, self).__init__(403)
         self.permission = permission
         self.resource = resource
 
@@ -68,9 +69,10 @@ def check_permission(current, permission, resource, user=None,
     # wget).
     token = current.request.vars.token
     if with_tokens and token:
-        if check_permission_with_token(
-            current, permission, resource, token):
-            current.request.token = token
+        token_info = check_permission_with_token(
+            current, permission, resource, token)
+        if token_info:
+            current.request.token = token_info
             return True
 
         # User presented a token but it was invalid.
@@ -119,11 +121,11 @@ def check_permission_with_token(current, permission, resource, token):
 
         # All roles are delegated.
         if row.role == "All":
-            return True
+            return row.as_dict()
 
         # Check that permission is granted by the delegated role.
         if permission in _roles_to_permissions.get(row.role, []):
-            return True
+            return row.as_dict()
 
     return False
 
@@ -175,13 +177,18 @@ def my(current):
     """List all of the calling user's roles."""
     db = current.db
     result = []
-    for row in db(db.permissions.user == get_current_username()).select():
+    for row in db(
+        db.permissions.user == get_current_username(current)).select():
         result.append(row.as_dict())
 
     return dict(data=result)
 
 
-def get_current_username():
+def get_current_username(current):
+    # If access was granted through a token, the username is the delegator.
+    if current.request.token:
+        return current.request.token.delegator
+
     user = users.get_current_user()
     if not user:
         return ""
@@ -297,7 +304,7 @@ def require_admin():
 
 
 def count_notifications(current):
-    user = get_current_username()
+    user = get_current_username(current)
     db = current.db
     return db((db.notifications.user == user) &
               (db.notifications.read == False)).count()
@@ -307,7 +314,7 @@ def send_notifications(current, user, message_id, args):
     """Send a notification to the user."""
     db = current.db
     db.notifications.insert(
-        from_user=get_current_username(),
+        from_user=get_current_username(current),
         user=user,
         message_id=message_id,
         args=args)
@@ -319,7 +326,8 @@ def read_notifications(current):
     db = current.db
     result = []
 
-    for row in db(db.notifications.user == get_current_username()).select():
+    for row in db(
+        db.notifications.user == get_current_username(current)).select():
         result.append(row.as_dict())
         if not row.read:
             row.update_record(read=True)
@@ -330,7 +338,7 @@ def read_notifications(current):
 def clear_notifications(current):
     db = current.db
 
-    db((db.notifications.user == get_current_username()) &
+    db((db.notifications.user == get_current_username(current)) &
        (db.notifications.read == True)).delete()
 
     return dict()
@@ -342,7 +350,7 @@ def mint_token(current, role, resource):
         raise PermissionDenied("token.mint", "/")
 
     db = current.db
-    id = db.tokens.insert(delegator=get_current_username(),
+    id = db.tokens.insert(delegator=get_current_username(current),
                           role=role,
                           resource=resource)
 

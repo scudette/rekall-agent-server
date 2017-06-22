@@ -6,6 +6,8 @@ from gluon import html
 from rekall_lib.types import actions
 from rekall_lib.types import agent
 
+import api
+
 from api import firebase
 from api import users
 from api import utils
@@ -72,7 +74,7 @@ def launch_plugin_flow(current, client_id, rekall_session, plugin, plugin_arg):
             client_id=client_id,
             flow_id=flow_id,
             status="Pending"),
-        creator=users.get_current_username(),
+        creator=users.get_current_username(current),
         flow=flow,
     )
 
@@ -187,7 +189,7 @@ def launch_canned_flows(current, client_id, name):
             client_id=client_id,
             flow_id=flow_id,
             status="Pending"),
-        creator=users.get_current_username(),
+        creator=users.get_current_username(current),
         flow=flow,
     )
 
@@ -198,3 +200,34 @@ def launch_canned_flows(current, client_id, name):
     firebase.notify_client(client_id)
 
     return {}
+
+
+def download(current, flow_ids, client_id):
+    """Allow downloading of the flows, their results."""
+    if isinstance(flow_ids, basestring):
+        flow_ids = [flow_ids]
+
+    db = current.db
+    result = []
+    grants = {}
+    for row in db(db.flows.flow_id.belongs(flow_ids)).select():
+        token = grants.get(row.client_id)
+        if token is None:
+            # Only show the flows from clients that the caller is authorized
+            # for.
+            if users.check_permission(
+                current, "clients.view", "/" + row.client_id):
+                token = users.mint_token(
+                    current, "Examiner", "/" + row.client_id)["token"]
+            else:
+                token = ""
+
+            grants[row.client_id] = token
+        if token:
+            result.append(dict(name=row.flow_id,
+                               flow=row.flow.to_primitive(),
+                               client_id=row.client_id,
+                               token=token,
+                               status=row.status.to_primitive()))
+
+    return dict(data=result)

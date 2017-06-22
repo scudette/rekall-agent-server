@@ -1,5 +1,6 @@
 """This part of the API is communicated directly with the client."""
 import datetime
+import time
 
 from rekall_lib.types import agent
 from rekall_lib.types import client
@@ -64,7 +65,14 @@ def jobs(current):
     # Update metadata about the client.
     row = db(db.clients.client_id == current.client_id).select().first()
     if row:
-        row.update_record(last=datetime.datetime.utcnow())
+        request = current.request
+        last_info = agent.LastClientState.from_keywords(
+            timestamp=time.time(),
+            latlong=request.env["HTTP_X-AppEngine-CityLatLong"],
+            city=request.env["HTTP_X-AppEngine-City"],
+            ip=request.client)
+        row.update_record(last=datetime.datetime.utcnow(),
+                          last_info=last_info)
 
     return result.to_primitive()
 

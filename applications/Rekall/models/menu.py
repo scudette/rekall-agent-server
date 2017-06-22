@@ -30,29 +30,9 @@ def InitializeMenu():
 
     if users.check_permission(current, "clients.search", "/"):
         response.menu.append(
-            (T('Clients'), False, '#', [
-                (T('Search'), True, URL(c='default', f='index'))
+            (T('Clients'), False, dict(_href="#", _id="client_lru"), [
+                (T('-'), False, None),
             ]))
-
-    if request.vars.client_id:
-        try:
-            client_information = api.api_dispatcher.call(
-                current, "/client/search", request.vars.client_id)["data"]
-            if client_information:
-                client_information = client_information[0]
-                try:
-                    client_name = client_information["summary"]["system_info"]["fqdn"]
-                except KeyError:
-                    client_name = request.vars.client_id
-
-                response.menu[-1][3].append(
-                    (client_name, True,
-                     A(client_name,
-                       _onclick="rekall.clients.show_info('%s');" % (
-                           request.vars.client_id))))
-        except http.HTTP:
-            pass
-
 
     response.menu.append(
         (T('Artifacts'), False, "#", [
@@ -76,7 +56,7 @@ def InitializeMenu():
         (T('Api'), True, URL(c="default", f="api")))
 
     response.right_menu = [
-        (users.get_current_username(), False, "#", [
+        (users.get_current_username(current), False, "#", [
             (T('Logout'), False, URL('default', 'logout'), []),
         ])
     ]

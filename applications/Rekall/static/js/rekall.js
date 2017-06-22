@@ -56,7 +56,6 @@ rekall.utils.api = function(endpoint) {
   return rekall.globals.api_route + endpoint;
 }
 
-
 // A wrapper around an $.ajax object which modifies the url, adds a common csrf
 // header etc. The returned object should be sent to $.ajax for actual
 // processing.
@@ -179,6 +178,41 @@ rekall.utils.error_container = function(jqXHR) {
   $("#error_message_container").show();
 }
 
+rekall.utils.editor_popup = function(text, type) {
+  type = type || "yaml";
+  var save = $('<button type="button" class="btn btn-default" id="save">Save</button>');
+
+  $("#modalContainer").html(
+      rekall.templates.modal_template(
+          $('<div class="editor" id="editor">').text(text).prop("outerHTML"),
+          "Title", save));
+  $("#modal").modal("show");
+
+  var editor = ace.edit("editor");
+  editor.setTheme("ace/theme/monokai");
+  editor.getSession().setMode("ace/mode/" + type);
+
+  save.click(function () {
+    rekall.utils.download_to_browser("download.sh", editor.getValue());
+    return false;
+  });
+}
+
+rekall.utils.download_to_browser = function(filename, text) {
+  var element = document.createElement('a');
+  element.setAttribute('href', 'data:text/plain;charset=utf-8,' +
+      encodeURIComponent(text));
+  element.setAttribute('download', filename);
+
+  element.style.display = 'none';
+  document.body.appendChild(element);
+
+  element.click();
+
+  document.body.removeChild(element);
+}
+
+
 // Templates. We use jquery native templates because these are faster and safer
 // than other javascript based templates.
 rekall.templates = {}
@@ -253,6 +287,7 @@ rekall.templates.mint_token = function(roles) {
   for (var i=0; i<roles.length; i++) {
     var link = $("<a href='#'>").click(function () {
       $("#role").text($(this).text());
+      return false;
     });
     link.text(roles[i]).appendTo($("<li>").appendTo(ul));
   }
@@ -278,6 +313,7 @@ rekall.templates.mint_token = function(roles) {
             "alert-danger");
       },
     }));
+    return false;
   });
 
   return rekall.templates.modal_template(result, "Mint Access Token");
@@ -387,6 +423,40 @@ rekall.templates.load_precanned_flow_template = function(client_id) {
   return table;
 }
 
+rekall.templates.flow_download_script = function(metadatas) {
+  var result = "";
+  result += "export API_ENDPOINT='" + rekall.globals.api_route + "'\n";
+
+  for (var i=0; i<metadatas.length; i++) {
+    var metadata = metadatas[i];
+    result += "export TOKEN='" + metadata.token + "'\n";
+    result += "export FLOW_ID='" + metadata.name + "'\n";
+    result += "export CLIENT_ID='" + metadata.client_id + "'\n";
+    result += `
+
+echo Fetching flow $FLOW_ID
+mkdir -p $FLOW_ID
+`;
+    if (metadata.status.collection_ids) {
+      result += "mkdir -p $FLOW_ID/collections/\n";
+      for (var j=0; j<metadata.status.collection_ids.length; j++) {
+        result += "export COLLECTION_ID='" +
+            metadata.status.collection_ids[j] + "'\n";
+        result += "wget --output-document=$FLOW_ID/collections/$COLLECTION_ID.json \\\n";
+        result += "  \"$API_ENDPOINT/collections/get?client_id=$CLIENT_ID&collection_id=$COLLECTION_ID&token=$TOKEN\" \n";
+      }
+    }
+  }
+
+  return result;
+}
+
+
+rekall.templates.render_client_info = function(client_info) {
+  return rekall.cell_renderers.generic_json_renderer(client_info)
+
+}
+
 rekall.api = {}
 rekall.api.list = function(selector) {
   $(selector).DataTable({
@@ -394,6 +464,17 @@ rekall.api.list = function(selector) {
       api: '/list',
     }),
     columns: [
+      {
+        title: "",
+        data: "method",
+        render: function(method, type, row, meta) {
+          return rekall.utils.make_link(
+              rekall.globals.controllers.api_call + "?" + $.param({
+                method: method
+              }),
+              'launch-icon.png');
+        }
+      },
       {
         title: "Method",
         data: "method",
@@ -432,6 +513,27 @@ rekall.api.mint_token = function() {
       $("#modal").modal("show");
     }
   }));
+}
+
+rekall.api.call = function(form_selector, button_selector, method) {
+  $(button_selector).click(function () {
+    $.ajax(rekall.utils.call({
+      api: method,
+      data: $(form_selector).serializeArray(),
+      method: "POST",
+      success: function(result) {
+        $("#modalContainer").html(
+            rekall.templates.modal_template(
+                rekall.cell_renderers.generic_json_renderer(result),
+                "API Result",
+                ));
+        $("#modal").modal("show");
+      },
+      error: rekall.utils.error,
+    }));
+
+    return false;
+  });
 }
 
 rekall.artifacts = {}
@@ -482,6 +584,61 @@ rekall.artifacts.upload = function(artifact) {
 // Client controller.
 rekall.clients = {}
 
+rekall.client_lru = []
+rekall.clients.add_to_client_lru = function (client_id) {
+  var new_client_lru = []
+  var length = rekall.client_lru.length;
+  for (var i=Math.max(0, length-10); i<length; i++) {
+    if (rekall.client_lru[i] != client_id) {
+      new_client_lru.push(rekall.client_lru[i]);
+    }
+  }
+
+  new_client_lru.push(client_id);
+  rekall.client_lru = new_client_lru;
+
+  // Rebuild the LRU list DOM.
+  var dom_lru = $("#client_lru").parent().find("ul");
+  dom_lru.html("");
+
+  for (var i=0; i<rekall.client_lru.length; i++) {
+    var client_id = rekall.client_lru[i];
+    var inspect_link = $("<a class='link'>")
+        .text(client_id)
+        .click(function () {
+          rekall.utils.load(rekall.globals.controllers.inspect_list,
+                            {client_id: client_id});
+          return true; // Propagate event.
+        });
+
+    dom_lru.append($("<li>").append(inspect_link));
+  }
+}
+
+rekall.clients.view_modal = function(client_id) {
+  $.ajax(rekall.utils.call({
+    api: "/client/search",
+    data: {
+      query: client_id
+    },
+    error: rekall.utils.error,
+    success: function(results) {
+      if (results.data.length > 0) {
+        html = rekall.templates.render_client_info(results.data[0]);
+      } else {
+        html = "Not found";
+      }
+
+      $("#modalContainer").html(
+          rekall.templates.modal_template(
+              html,
+              "Client " + client_id,
+              ));
+      $("#modal").modal("show");
+    }
+  }));
+}
+
 rekall.clients.render_client_info = function(client_id, selector) {
   $.ajax(rekall.utils.call({
     api: '/client/search',
@@ -518,13 +675,13 @@ rekall.clients.search_clients = function (query, selector) {
         searchable: false,
         orderable: false,
         render: function(client_id, type, row, meta) {
-          var link = $("<a class='link'>");
-          link.attr("href", rekall.globals.controllers.inspect_list +
-              "?" + $.param({
-            client_id: client_id}));
-          var img = $("<img class='icon'>");
-          img.attr("src", rekall.globals.image_dir + 'launch-icon.png');
-          link.append(img);
+          var link = $("<a href='#' class='client_id_link'>")
+              .attr("data_client_id", client_id);
+
+          $("<img class='icon'>")
+              .attr("src", rekall.globals.image_dir + 'launch-icon.png')
+              .appendTo(link);
+
           return link.prop('outerHTML');
         },
       },
@@ -566,6 +723,17 @@ rekall.clients.search_clients = function (query, selector) {
 
   rekall.cell_renderers.generic_json_pp_clicks(
       dataset_cache, "summary", "Summary", selector);
+
+  $(selector).on("click", "a.client_id_link", function (event) {
+    var client_id = $(this).attr("data_client_id");
+
+    rekall.clients.add_to_client_lru(client_id);
+    rekall.utils.load(rekall.globals.controllers.inspect_list,
+                      {client_id: client_id});
+
+    event.preventDefault();
+  });
+
 }
 
 // Pops the client info in a modal box.
@@ -578,6 +746,13 @@ rekall.clients.show_info = function(client_id) {
     success: function(data) {
       var summary = data.data[0];
       if (summary) {
+        var button = $("<button class='btn btn-default'>")
+            .click(function() {
+              rekall.utils.load(rekall.globals.inspect_list,
+                                {client_id: client_id});
+              return false;
+            });
+
         $("#modalContainer").html(
             rekall.templates.modal_template(
                 rekall.cell_renderers.generic_json_renderer(summary),
@@ -742,10 +917,12 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
   $("#select_all").click(function() {
     var state = this.checked;
     $("input[name=flow_ids]").each(function () {this.checked = state});
+    return false;
   });
 
   $("#save").click(function () {
-     rekall.flows.save_flows("#flows", client_id);
+    rekall.flows.save_flows("#flows", client_id);
+    return false;
   });
 
   $("#load").click(function () {
@@ -754,6 +931,7 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
             rekall.templates.load_precanned_flow_template(client_id),
             "Load a Pre-Canned Flow"));
     $("#modal").modal("show");
+    return false;
   });
 }
 
@@ -777,24 +955,26 @@ rekall.flows.save_flows = function(selector, client_id) {
     success: function(canned_flow) {
       var form = rekall.templates.save_flows(canned_flow);
       var submit = $(
-          "<button type='button' class='btn btn-default'>Save</button>");
-      submit.click(function () {
-        canned_flow.name = form.find("#name").val();
-        canned_flow.description = form.find("#description").val();
-        canned_flow.category = form.find("#category").val();
+          "<button type='button' class='btn btn-default'>Save</button>")
+              .click(function () {
+                canned_flow.name = form.find("#name").val();
+                canned_flow.description = form.find("#description").val();
+                canned_flow.category = form.find("#category").val();
 
-        $.ajax(rekall.utils.call({
-          method: "POST",
-          api: "/flows/save_canned",
-          data: {
-            canned_flow: JSON.stringify(canned_flow),
-          },
-          success: function() {
-            $("#modal").modal("hide");
-          },
-          error: rekall.utils.error_container
-        }));
-      });
+                $.ajax(rekall.utils.call({
+                  method: "POST",
+                  api: "/flows/save_canned",
+                  data: {
+                    canned_flow: JSON.stringify(canned_flow),
+                  },
+                  success: function() {
+                    $("#modal").modal("hide");
+                  },
+                  error: rekall.utils.error_container
+                }));
+
+                return false;
+              });
 
       $("#modalContainer").html(
           rekall.templates.modal_template(form, "Save Flow", submit));
@@ -838,12 +1018,16 @@ rekall.flows.list_canned_flows = function(selector) {
   $("#select_all").click(function() {
     var state = this.checked;
     $("input[name=names]").each(function () {this.checked = state});
+
+    return false;
   });
 
   rekall.utils.watch_checkboxes_to_disabled_button(selector, "#delete");
 
   $("#delete").click(function() {
     rekall.flows.delete_canned_flows(selector);
+
+    return false;
   });
 }
 
@@ -899,6 +1083,33 @@ rekall.flows.delete_canned_flows = function(selector) {
       rekall.utils.load(window.location.href);
     }
   });
+}
+
+rekall.flows.download = function (client_id, selector) {
+  var selected_flow_ids = [];
+  $(selector).find("input[name=flow_ids]").each(function () {
+    if (this.checked) selected_flow_ids.push(this.value);
+  });
+
+  if (selected_flow_ids.length == 0) {
+    return;
+  }
+
+  $.ajax(rekall.utils.call({
+    api: "/flows/download",
+    data: {
+      client_id: client_id,
+      flow_ids: selected_flow_ids
+    },
+    success: function(metadata) {
+      rekall.utils.editor_popup(
+          rekall.templates.flow_download_script(metadata.data),
+          "sh");
+    },
+    error: rekall.utils.error,
+  }));
+
+  return false;
 }
 
 rekall.uploads = {}
@@ -1422,8 +1633,9 @@ rekall.collections.build_table_from_collection = function (
           .append(tab_content);
 
       $(selector + ' a').click(function (e) {
-        e.preventDefault()
         $(this).tab('show')
+
+        return false;
       }).first().click();
 
       $("#progressbar").hide();

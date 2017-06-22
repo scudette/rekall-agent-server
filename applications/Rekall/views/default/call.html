@@ -1,0 +1,8 @@
+{{extend response.layout_path}}
+
+<h2>Call {{=method}}</h2>
+{{=form}}
+<button type="button" class="btn btn-default" id="submit">Submit</button>
+<script>
+    rekall.api.call("form", "#submit", "{{=method}}");
+</script>

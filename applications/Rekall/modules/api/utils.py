@@ -10,20 +10,24 @@ def route_api(endpoint, *args, **kwargs):
         host=True)
 
 
-def build_form(inputs, **kwargs):
+def build_form(inputs, with_submit=True, **kwargs):
     elements = []
     for input in inputs:
         input.attributes["_class"] = "form-control"
         name = input.attributes["_name"]
 
-        elements.append(html.DIV(
-            html.LABEL(name,
-                  _class="col-sm-2 control-label",
-                  _for=name),
-            html.DIV(input, _class="col-sm-7"),
+        if (input.attributes["_type"] != "hidden"):
+            elements.append(html.DIV(
+                html.LABEL(name,
+                           _class="col-sm-2 control-label",
+                           _for=name),
+                html.DIV(input, _class="col-sm-7"),
             _class="form-group"))
+        else:
+            elements.append(input);
 
-    elements.append(html.INPUT(_type="submit", _role="button",
-                               _class="btn btn-default"))
+    if with_submit:
+        elements.append(html.INPUT(_type="submit", _role="button",
+                                   _class="btn btn-default"))
 
     return html.FORM(*elements, _class="form-horizontal", **kwargs)
