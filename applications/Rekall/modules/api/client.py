@@ -1,4 +1,7 @@
 """Methods for accessing clients."""
+from __future__ import absolute_import
+
+import collections
 import json
 
 from api import users
@@ -29,7 +32,7 @@ def search(current, query=None):
 
     return dict(data=result)
 
-search.args = dict(
+search.args = collections.OrderedDict(
     query="The query string. If it starts with a 'C.' then we display an exact "
     "match. Otherwise we search for a hostname prefix.")
 
@@ -52,10 +55,10 @@ def request_approval(current, client_id, approver, role):
     users.send_notifications(
         current, approver, "APPROVAL_REQUEST", dict(
             client_id=client_id,
-            user=users.get_current_username(),
+            user=users.get_current_username(current),
             role=role))
 
-request_approval.args = dict(
+request_approval.args = collections.OrderedDict(
     client_id="The client to grant access to.",
     approver="The user that should approve the request.",
     role="The role granted.")
@@ -70,7 +73,7 @@ def approve_request(current, client_id, user, role):
 
         return "ok"
 
-approve_request.args = dict(
+approve_request.args = collections.OrderedDict(
     client_id="The client to grant access to.",
     user="The user getting the approval.",
     role="The role granted.")

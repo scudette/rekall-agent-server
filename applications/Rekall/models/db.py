@@ -119,6 +119,9 @@ db.define_table('clients',
                 Field('last', type="datetime",
                       comment="Last contact time"),
 
+                Field('last_info',
+                      type=dal.SerializerType(agent.LastClientState)),
+
                 # Information here is searchable in the browser.
                 Field('summary', type='json',
                       comment='A client.StartupMessage instance '

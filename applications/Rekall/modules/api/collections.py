@@ -1,4 +1,8 @@
 """Get information about collections."""
+from __future__ import absolute_import
+
+import collections
+
 from gluon import http
 
 from google.appengine.ext import blobstore
@@ -18,12 +22,12 @@ def metadata(current, collection_id, client_id):
 
     return {}
 
-metadata.args = dict(
+metadata.args = collections.OrderedDict(
     collection_id="The collection id to examine.",
     client_id="The client owning the collection (used for ACL checks).")
 
 
-def get(current, collection_id, client_id, part):
+def get(current, collection_id, client_id, part=0):
     """Stream the requested collection.
 
     Note that we do not edit the collection in any way we just stream the same
@@ -46,7 +50,7 @@ def get(current, collection_id, client_id, part):
         else:
             raise http.HTTP(404, "collection not found")
 
-get.args = dict(
+get.args = collections.OrderedDict(
     collection_id="The collection id to examine.",
     client_id="The client owning the collection (used for ACL checks).",
     part="The part of the collection (used for large collections)")

@@ -39,6 +39,16 @@
           title="Refresh"></span>&nbsp;
   </button>
 
+  <button type="button" class="btn btn-default disabled" id="download">
+    <span class="glyphicon glyphicon-download" aria-hidden="true"
+          title="Download"></span>&nbsp;
+  </button>
+
+  <button type="button" class="btn btn-default" id="info">
+    <span class="glyphicon glyphicon-info-sign" aria-hidden="true"
+          title="Client Info"></span>&nbsp;
+  </button>
+
 </div>
 
 <div class="table-container">
@@ -50,11 +60,23 @@
   rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#delete");
   rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#export");
   rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#save");
+  rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#download");
+
   $("#refresh").click(function () {
     rekall.utils.load(window.location.href);
   });
 
   $("#export").click(function () {
     rekall.flows.export_flows("{{=client_id}}", "#flows");
+  });
+
+  $("#info").click(function() {
+    rekall.clients.view_modal("{{=client_id}}");
+    return false;
+  });
+
+  $("#download").click(function() {
+    rekall.flows.download("{{=client_id}}", "#flows");
+    return false;
   });
 </script>
