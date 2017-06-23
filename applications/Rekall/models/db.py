@@ -127,7 +127,15 @@ db.define_table('clients',
                       comment='A client.StartupMessage instance '
                       'filled in by the client'),
 
+                # Intrinsic labels are those baked into the client.
+                Field('labels', type="list:string",
+                      comment="A list of intrinsic labels for this client."),
+
+                # Custom labels are those that users assign to clients.
+                Field('custom_labels', type="list:string",
+                      comment="A list of custom (user settable) lables."),
                 format='%(client_id)s')
+
 
 # TODO: Implement log retention mechanism.
 db.define_table('client_logs',
@@ -147,8 +155,7 @@ db.define_table('flows',
                       comment="Each flow has a unique ID"),
                 Field('client_id', notnull=True,
                       comment="The Client this flow is intended for."),
-                Field('timestamp', type="datetime",
-                      default=datetime.datetime.utcnow,
+                Field('timestamp', type="integer",
                       comment="When the flow was created"),
                 Field('flow', type=dal.SerializerType(agent.Flow),
                       comment="Flow to be sent to the client."),
@@ -157,6 +164,21 @@ db.define_table('flows',
                 Field('status', type=dal.SerializerType(agent.FlowStatus),
                       comment="The latest Flow status."),
                 )
+
+db.define_table('hunts',
+                Field('hunt_id', unique=True, notnull=True,
+                      comment="A unique id for each hunt"),
+                Field('labels', type="list:string",
+                      comment="The list of labels the hunt applies to."),
+                Field('timestamp', type="integer",
+                      comment="When the hunt was created"),
+                Field('flow', type=dal.SerializerType(agent.Flow),
+                      comment="Flow object to be sent to the client."),
+                Field('creator', type='string',
+                      comment="Username that created the flow"),
+                Field('status', type=dal.SerializerType(agent.HuntStatus),
+                      comment="The latest Flow status."))
+
 
 db.define_table('collections',
                 Field('collection_id', unique=True, notnull=True,
@@ -212,3 +234,8 @@ db.define_table("canned_flows",
                 Field("flow", type=dal.SerializerType(agent.CannedFlow),
                       comment="The canned flow"),
                 )
+
+
+db.define_table("labels",
+                Field("name",
+                      comment="A label name"))

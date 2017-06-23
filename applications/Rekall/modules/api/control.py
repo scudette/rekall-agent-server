@@ -42,21 +42,29 @@ def startup(current):
                           data_type="StartupMessage",
                           data=client_message.to_primitive())
 
+    for label in client_message.labels:
+        current.db.labels.update_or_insert(
+            current.db.labels.name == label,
+            name=label)
+
     current.db.clients.update_or_insert(
         current.db.clients.client_id == current.client_id,
         client_id=current.client_id,
         hostname=client_message.system_info.node,
+        labels=client_message.labels,
         summary=client_message.to_primitive())
 
     return {}
 
 
-def jobs(current):
+def jobs(current, last_flow_time=0):
     """List all the jobs intended for this client."""
     db = current.db
     result = agent.JobFile()
-    for row in db(db.flows.client_id == current.client_id).select():
-        # Send off newly schedules flows.
+    last_flow_time = int(last_flow_time)
+    for row in db((db.flows.client_id == current.client_id) &
+                  (db.flows.timestamp > last_flow_time)).select():
+        # Send off newly scheduled flows.
         if row.status.status == 'Pending':
             row.status.status = "Started"
             row.update_record(status=row.status)
@@ -73,6 +81,14 @@ def jobs(current):
             ip=request.client)
         row.update_record(last=datetime.datetime.utcnow(),
                           last_info=last_info)
+
+        # Now check for hunts for this client.
+        labels = set(utils.BaseValueList(row.labels)).union(
+            utils.BaseValueList(row.custom_labels))
+        for hunts in db(
+            db.hunts.labels.belongs(labels) &
+            (db.hunts.timestamp > last_flow_time)).select():
+            result.flows.append(hunts.flow)
 
     return result.to_primitive()
 

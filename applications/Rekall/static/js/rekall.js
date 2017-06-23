@@ -151,6 +151,11 @@ rekall.utils.safe_html = function(text) {
   return $("<div>").text(text).html();
 }
 
+rekall.utils.checkbox_tristate = function () {
+  if (this.readOnly) this.checked=this.readOnly=false;
+  else if (!this.checked) this.readOnly=this.indeterminate=true;
+}
+
 rekall.utils.error = function(jqXHR) {
   var description;
 
@@ -453,9 +458,105 @@ mkdir -p $FLOW_ID
 
 
 rekall.templates.render_client_info = function(client_info) {
-  return rekall.cell_renderers.generic_json_renderer(client_info)
-
+  return rekall.cell_renderers.generic_json_renderer(client_info);
 }
+
+rekall.templates.label_clients = function(client_ids, labels) {
+  var form = $("<form><input type='text' name='labels'>")
+      .append(rekall.templates.error_message_container());
+
+  $(labels).each(function () {
+    var checkbox = $("<input type='checkbox' name='existing'>")
+        .attr("value", this)
+        .prop("indeterminate", true);
+    form.append(checkbox).append($("<div>").text(this));
+  });
+
+  $(form).find("input[name=existing]").click(
+      rekall.utils.checkbox_tristate);
+
+  return form;
+}
+
+rekall.templates.create_hunt_from_flows = function(labels, flow_ids) {
+  var result=$(`
+<div>
+  <div class="input-group ui-widget">
+    <span class="input-group-addon" id="basic-addon1">Label</span>
+    <input type="text" class="form-control" id="labels"
+     placeholder="Comma separated list of labels.">
+     <span class="input-group-addon" id="label_complete">
+       <span class="caret"></span>
+     </span>
+  </div>
+</div>
+`).append(rekall.templates.error_message_container());
+
+  function split( val ) {
+    return val.split( /,\s*/ );
+  }
+  function extractLast( term ) {
+    return split( term ).pop();
+  }
+
+  var labels_input = result.find("#labels");
+  result.find("#label_complete").click(function () {
+    labels_input.trigger(jQuery.Event("keydown"));
+    return false;
+  });
+   // don't navigate away from the field on tab when selecting an item
+  labels_input.on( "keydown", function( event ) {
+    if ( event.keyCode === $.ui.keyCode.TAB &&
+        $( this ).autocomplete( "instance" ).menu.active ) {
+      event.preventDefault();
+    }
+  }).autocomplete({
+    classes: {
+      "ui-autocomplete": "modal-autocomplete",
+    },
+    minLength: 0,
+    source: function( request, response ) {
+      // delegate back to autocomplete, but extract the last term
+      response( $.ui.autocomplete.filter(
+          labels, extractLast( request.term ) ) );
+    },
+    focus: function() {
+      // prevent value inserted on focus
+      return false;
+    },
+    select: function( event, ui ) {
+      var terms = split( this.value );
+      // remove the current input
+      terms.pop();
+      // add the selected item
+      terms.push( ui.item.value );
+      // add placeholder to get the comma-and-space at the end
+      terms.push( "" );
+      this.value = terms.join( ", " );
+      return false;
+    },
+  });
+
+  var button = $("<button class='btn btn-default' id='launch'>")
+      .text("Launch")
+      .click(function() {
+        var labels = split($("#labels").val());
+        $.ajax(rekall.utils.call({
+          api: "/hunts/launch",
+          data: {
+            labels: labels,
+            flow_ids: flow_ids
+          },
+          error: rekall.utils.error_container,
+          success: function() {
+            rekall.utils.load(rekall.globals.controllers.hunts_view);
+          }
+        }));
+      });
+
+  return rekall.templates.modal_template(result, "Run Flow as Hunt", button);
+}
+
 
 rekall.api = {}
 rekall.api.list = function(selector) {
@@ -670,6 +771,17 @@ rekall.clients.search_clients = function (query, selector) {
     }),
     columns: [
       {
+        title: '<input id="select_all" type="checkbox">',
+        data: "client_id",
+        sortable: false,
+        render: function(client_id, type, row, meta) {
+          var checkbox = $('<input name="client_ids" type="checkbox">');
+          checkbox.attr("value", client_id);
+          checkbox.attr("data_labels", row.labels.join(","));
+          return checkbox.prop("outerHTML");
+        }
+      },
+      {
         title: "Flows",
         data: "client_id",
         searchable: false,
@@ -717,7 +829,14 @@ rekall.clients.search_clients = function (query, selector) {
               dataset_cache, text, "summary",
               cell_data, type, row, meta);
         }
-      }
+      },
+      {
+        title: "Labels",
+        data: "labels",
+        render: function(labels, type, row, meta) {
+          return labels.join(",");
+        },
+      },
     ],
   });
 
@@ -735,6 +854,56 @@ rekall.clients.search_clients = function (query, selector) {
   });
 
 }
+
+rekall.clients.label = function(selector) {
+  var selected_client_ids = [];
+  var labels = new Set();
+
+  $(selector).find("input[name=client_ids]").each(function () {
+    if (this.checked) {
+      selected_client_ids.push(this.value);
+      var entry_labels = $(this).attr("data_labels").split(",");
+      $(entry_labels).each(function () {
+        labels.add(this);
+      });
+    }
+  });
+
+  if (selected_client_ids.length == 0) {
+    return;
+  }
+
+  var button = $('<button class="btn btn-default">Label</button>');
+  button.click(function () {
+    var labels = [];
+    $("input[name=labels]").each(function () {
+      labels.push($(this).val());
+    });
+
+    $.ajax(rekall.utils.call({
+      api: "/client/label",
+      data: {
+        client_ids: selected_client_ids,
+        labels: labels,
+      },
+      error: rekall.utils.error_container,
+      success: function() {
+        rekall.utils.load(window.location.href);
+      }
+    }));
+  });
+
+  $("#modalContainer").html(
+      rekall.templates.modal_template(
+          rekall.templates.label_clients(
+              selected_client_ids, Array.from(labels)),
+          "Label clients", button
+          ));
+  $("#modal").modal("show");
+
+  return false;
+}
+
 
 // Pops the client info in a modal box.
 rekall.clients.show_info = function(client_id) {
@@ -860,8 +1029,10 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
       },
       {
         title: "Time",
-        data: "timestamp",
-        type: "unix",
+        data: "flow.created_time",
+        render: function(timestamp, type, row, meta) {
+          return rekall.cell_renderers.unixtimestamp(timestamp);
+        }
       },
       {
         title: "Flow",
@@ -1049,24 +1220,6 @@ rekall.flows.delete_canned_flows = function(selector) {
   }));
 }
 
-rekall.flows.export_flows = function(client_id, selector) {
-  var selected_names = [];
-  $(selector).find("input[name=names]").each(function () {
-    if (this.checked) selected_names.push(this.value);
-  });
-
-  $.ajax(rekall.utils.call({
-    api: "/flows/export",
-    data: {
-      names: selected_names,
-    },
-    error: rekall.utils.error,
-    success: function() {
-      rekall.utils.load(window.location.href);
-    }
-  }));
-}
-
 rekall.flows.delete_canned_flows = function(selector) {
   var selected_names = [];
   $(selector).find("input[name=names]").each(function () {
@@ -1111,6 +1264,98 @@ rekall.flows.download = function (client_id, selector) {
 
   return false;
 }
+
+rekall.hunts = {}
+rekall.hunts.create_from_flows = function(client_id, selector) {
+  var selected_flow_ids = [];
+  $(selector).find("input[name=flow_ids]").each(function () {
+    if (this.checked) selected_flow_ids.push(this.value);
+  });
+
+  if (selected_flow_ids.length == 0) {
+    return;
+  }
+
+  $.ajax(rekall.utils.call({
+    api: "/labels/list",
+    error: rekall.utils.error,
+    success: function(labels) {
+      $("#modalContainer").html(
+          rekall.templates.create_hunt_from_flows(labels.data, selected_flow_ids));
+      $("#modal").modal("show");
+    }
+  }));
+  return false;
+}
+
+rekall.hunts.view = function(selector) {
+  var flow_cache = {};
+  var status_cache = {};
+
+  $(selector).DataTable({
+    ajax: rekall.utils.call({
+      api: "/hunts/list",
+    }),
+    columns: [
+      {
+        title: '<input id="select_all" type="checkbox">',
+        data: "flow",
+        sortable: false,
+        render: function(flow, type, row, meta) {
+          var checkbox = $('<input name="flow_ids" type="checkbox">');
+          checkbox.attr("value", flow.flow_id);
+          return checkbox.prop("outerHTML");
+        }
+      },
+      {
+        title: "Created",
+        data: "timestamp",
+        render: function(timestamp, type, row, meta) {
+          return rekall.cell_renderers.unixtimestamp(timestamp)
+        }
+      },
+      {
+        title: "Flow",
+        data: "flow",
+        render: function(flow, type, row, meta) {
+          var text = flow.name;
+          if (!text) {
+            text = rekall.cell_renderers.flow_summary_renderer(flow);
+          }
+          return rekall.cell_renderers.generic_json_pp(
+              flow_cache, text, "flow",
+              flow, type, row, meta);
+        }
+      },
+      {
+        title: "Labels",
+        data: "labels",
+        render: function(labels, type, row, meta) {
+          return labels.join(",");
+        },
+      },
+      {
+        title: "Status",
+        data: "status",
+        render: function(status, type, row, meta) {
+          var text = "Total " + (status.total_clients || 0) +
+              " (Errors: " + (status.total_errors || 0) + " )";
+          return rekall.cell_renderers.generic_json_pp(
+              status_cache, text, "status",
+              status, type, row, meta);
+        }
+      },
+    ]
+  });
+
+  rekall.cell_renderers.generic_json_pp_clicks(
+      flow_cache, "flow", "Flow Information", selector);
+
+  rekall.cell_renderers.generic_json_pp_clicks(
+      status_cache, "status", "Flow Status", selector,
+      rekall.cell_renderers.status_detailed_renderer);
+}
+
 
 rekall.uploads = {}
 rekall.uploads.list_uploads_for_flow = function(flow_id, selector) {
@@ -1269,6 +1514,10 @@ rekall.cell_renderers.generic_json_pp_clicks = function(
   });
 }
 
+
+rekall.cell_renderers.unixtimestamp = function(timestamp) {
+  return new Date(timestamp * 1000).toUTCString();
+}
 
 rekall.cell_renderers.generic_ajax_clicks = function(
     dataset_cache, // The cache object used to keep table references.
@@ -1602,7 +1851,8 @@ rekall.collections.build_table_from_collection = function (
                           }
 
                           if (cell_type == "epoch") {
-                            return new Date(cell_data * 1000).toUTCString();
+                            return rekall.cell_renderers.unixtimestamp(
+                                cell_data);
                           }
 
                           return $("<div>").text(cell_data).html();

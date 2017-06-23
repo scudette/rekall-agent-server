@@ -231,3 +231,12 @@ def download(current, flow_ids, client_id):
                                status=row.status.to_primitive()))
 
     return dict(data=result)
+
+
+def list_labels(current):
+    db = current.db
+    result = set()
+    for row in db(db.labels).select():
+        result.add(row.name)
+
+    return dict(data=sorted(result))

@@ -40,6 +40,8 @@ def InitializeMenu():
             (T('Precanned Flows'), True, URL(c='flows', f='list_canned')),
         ]))
 
+    response.menu.append(
+        (T("Hunts"), False, URL(c="hunts", f="view")))
 
     # User is administrator - show them the users menu..
     if users.check_permission(current, "users.admin", "/"):

@@ -34,6 +34,7 @@
       save_flow: "{{=URL(c='flows', f='save')}}",
       api_call: "{{=URL(c='default', f='call')}}",
       download_flows: "{{=URL(c='flows', f='download')}}",
+      hunts_view: "{{=URL(c='hunts', f='view')}}",
     },
 
     api_route: "{{=URL(c='api', f='run', host=True)}}",
@@ -54,7 +55,8 @@ response.files.append(URL('static','js/dataTables/DataTables-1.10.15/css/jquery.
 response.files.append(URL('static','js/dataTables/datatables.min.js'))
 response.files.append(URL('static','js/bootstrap.min.js'))
 response.files.append(URL('static','js/web2py-bootstrap3.js'))
-response.files.append(URL('static','js/ace/ace.js'))
+response.files.append(URL('static','jquery-ui-1.12.1.custom/jquery-ui.min.js'))
+response.files.append(URL('static','jquery-ui-1.12.1.custom/jquery-ui.min.css'))
 
 response.include_meta()
 response.include_files()

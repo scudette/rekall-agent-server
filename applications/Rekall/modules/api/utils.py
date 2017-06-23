@@ -31,3 +31,11 @@ def build_form(inputs, with_submit=True, **kwargs):
                                    _class="btn btn-default"))
 
     return html.FORM(*elements, _class="form-horizontal", **kwargs)
+
+
+def BaseValueList(obj):
+    res = []
+    for x in obj:
+        res.append(x.b_val)
+
+    return res

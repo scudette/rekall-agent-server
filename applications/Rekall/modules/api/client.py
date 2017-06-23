@@ -17,6 +17,9 @@ def search(current, query=None):
     # Search for a client ID directly.
     if query.startswith("C."):
         condition = current.db.clients.client_id == query
+    elif query.startswith("label:"):
+        label = query.split(":", 1)[1]
+        condition = current.db.clients.labels == label
     else:
         # AppEngine uses Bigtable which does not support `like` operation. We
         # only support a prefix match.
@@ -24,11 +27,14 @@ def search(current, query=None):
                      (current.db.clients.hostname < query + u"\ufffd"))
 
     result = []
-    for row in current.db(condition).select():
+    for row in current.db(condition).select(
+        orderby_on_limitby=False, limitby=(0, 1000)):
+        print row.labels, row.custom_labels
         result.append(dict(
             last=row.last,
             client_id=row.client_id,
-            summary=json.loads(row.summary)))
+            summary=json.loads(row.summary),
+            labels=sorted(set(row.labels).union(row.custom_labels))))
 
     return dict(data=result)
 
@@ -77,3 +83,13 @@ approve_request.args = collections.OrderedDict(
     client_id="The client to grant access to.",
     user="The user getting the approval.",
     role="The role granted.")
+
+
+
+def label(current, client_ids, labels):
+    db = current.db
+    for row in db(db.clients.client_id.belongs(client_ids)).select():
+        row.custom_labels.extend(labels)
+        row.update_record(custom_labels=row.custom_labels)
+
+    return {}
