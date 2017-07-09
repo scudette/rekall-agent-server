@@ -29,11 +29,6 @@
           title="Load Flows"></span>&nbsp;
   </button>
 
-  <button type="button" class="btn btn-default disabled" id="export">
-    <span class="glyphicon glyphicon-export" aria-hidden="true"
-          title="Export"></span>&nbsp;
-  </button>
-
   <button type="button" class="btn btn-default" id="refresh">
     <span class="glyphicon glyphicon-refresh" aria-hidden="true"
           title="Refresh"></span>&nbsp;
@@ -49,6 +44,11 @@
           title="Client Info"></span>&nbsp;
   </button>
 
+  <button type="button" class="btn btn-default disabled" id="hunt">
+    <span class="glyphicon glyphicon-screenshot" aria-hidden="true"
+          title="Hunt"></span>&nbsp;
+  </button>
+
 </div>
 
 <div class="table-container">
@@ -58,16 +58,12 @@
 <script>
   rekall.flows.list_flows_for_client("{{=client_id}}", "#flows");
   rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#delete");
-  rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#export");
   rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#save");
   rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#download");
+  rekall.utils.watch_checkboxes_to_disabled_button("#flows", "#hunt");
 
   $("#refresh").click(function () {
     rekall.utils.load(window.location.href);
-  });
-
-  $("#export").click(function () {
-    rekall.flows.export_flows("{{=client_id}}", "#flows");
   });
 
   $("#info").click(function() {
@@ -77,6 +73,11 @@
 
   $("#download").click(function() {
     rekall.flows.download("{{=client_id}}", "#flows");
+    return false;
+  });
+
+  $("#hunt").click(function() {
+    rekall.hunts.create_from_flows("{{=client_id}}", "#flows");
     return false;
   });
 </script>

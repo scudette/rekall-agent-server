@@ -13,6 +13,8 @@
     # View the canned flows.
     - canned_flow.read
 
+    - hunts.view
+
 - role: Approver
   description: >-
     This role allows the user to approve access to clients. Users with this role
@@ -21,6 +23,7 @@
   permissions:
     - clients.approve
     - artifacts.viewer
+    - hunts.approve
 
 - role: Examiner
   description: >-
@@ -42,6 +45,7 @@
     - flows.create
     - clients.view
     - flows.view
+    - hunts.propose
 
 - role: Administrator
   description: >-
@@ -54,6 +58,8 @@
     - application.login
     - artifact.write
     - canned_flow.write
+    - clients.label
+    - hunts.approve
 
 - role: Delegator
   description: >-

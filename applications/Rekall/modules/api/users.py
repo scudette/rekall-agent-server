@@ -222,6 +222,22 @@ def require_client(permission):
     return wrapper
 
 
+def require_flow(permission):
+    """Requires flow or hunt level permission."""
+    def wrapper(current):
+        resource = "/"
+        flow_id = (current.request.vars.flow_id or
+                   current.request.vars.hunt_id)
+        if flow_id:
+            resource = "/" + flow_id
+            if check_permission(current, permission, resource):
+                return True
+
+        raise PermissionDenied(permission, resource)
+
+    return wrapper
+
+
 def require_application(permission):
     """Requires application level permission."""
     def wrapper(current):
@@ -230,6 +246,24 @@ def require_application(permission):
             return True
 
         raise PermissionDenied(permission, resource)
+
+    return wrapper
+
+def require_either(*conditions):
+    """Require either of the conditions."""
+    def wrapper(current):
+        import pdb; pdb.set_trace()
+
+        e = None
+        for condition in conditions:
+            try:
+                if condition(current):
+                    return True
+            except PermissionDenied as e:
+                continue
+        if e: raise e
+
+        raise PermissionDenied()
 
     return wrapper
 

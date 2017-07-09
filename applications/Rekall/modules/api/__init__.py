@@ -3,13 +3,15 @@
 This is similar to the web2py Service() object.
 """
 # This loads API plugins from Rekall/modules/api/...
-from gluon import http
 import logging
+
+from gluon import http
 
 from api import client
 from api import collections
 from api import control
 from api import flows
+from api import hunts
 from api import forensic_artifacts
 from api import plugins
 from api import uploads
@@ -205,6 +207,12 @@ api_dispatcher.register("/list", discover,
                         [require_csrf_token(),
                          users.require_application("application.login")])
 
+
+api_dispatcher.register("/labels/list", flows.list_labels,
+                        [require_csrf_token(),
+                         users.require_application("application.login")])
+
+
 # Manage artifacts.
 api_dispatcher.register("/artifacts/add", forensic_artifacts.add,
                         [require_csrf_token(),
@@ -218,6 +226,12 @@ api_dispatcher.register("/artifacts/list", forensic_artifacts.list,
 api_dispatcher.register("/client/search", client.search,
                         [require_csrf_token(),
                          users.require_application("clients.search")])
+
+
+# Manage clients and access controls.
+api_dispatcher.register("/client/label", client.label,
+                        [require_csrf_token(),
+                         users.require_application("clients.label")])
 
 # The approval mechanism is used to promote a user with clients.search
 # (i.e. Viewer) permission to clients.view permission (i.e. Examiner). Therefore
@@ -246,6 +260,9 @@ api_dispatcher.register("/control/jobs", control.jobs,
 api_dispatcher.register("/control/ticket", control.ticket,
                         [users.require_client_authentication()])
 
+api_dispatcher.register("/control/hunt_ticket", control.hunt_ticket,
+                        [users.require_client_authentication()])
+
 api_dispatcher.register("/control/upload", control.upload,
                         [users.require_client_authentication()])
 
@@ -266,12 +283,11 @@ api_dispatcher.register("/plugin/get", plugins.get,
 # Get information about collections for a specific client.
 api_dispatcher.register("/collections/metadata", collections.metadata,
                         [require_csrf_token(),
-                         users.require_client("clients.view")])
+                         collections.require_collection_access])
 
 api_dispatcher.register("/collections/get", collections.get,
                         [require_csrf_token(),
-                         users.require_client("clients.view")])
-
+                         collections.require_collection_access])
 
 # Deal with flows. Must have at least Examiner access to the client.
 api_dispatcher.register("/flows/list", flows.list,
@@ -306,6 +322,24 @@ api_dispatcher.register("/flows/launch_canned", flows.launch_canned_flows,
 api_dispatcher.register("/flows/plugins/launch", flows.launch_plugin_flow,
                         [require_csrf_token(),
                          users.require_client("flows.create")])
+
+
+api_dispatcher.register("/hunts/propose", hunts.propose_from_flows,
+                        [require_csrf_token(),
+                         users.require_application("hunts.propose")])
+
+api_dispatcher.register("/hunts/approve", hunts.grant_approval,
+                        [require_csrf_token(),
+                         users.require_application("hunts.approve")])
+
+api_dispatcher.register("/hunts/list", hunts.list,
+                        [require_csrf_token(),
+                         users.require_application("hunts.view")])
+
+api_dispatcher.register("/hunts/results", hunts.results,
+                        [require_csrf_token(),
+                         users.require_application("hunts.view")])
+
 
 
 # File uploads.

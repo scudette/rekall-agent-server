@@ -16,4 +16,18 @@
 
 <script>
   rekall.clients.render_client_info("{{=client_id}}", "#client_info");
+
+  $("input[type=submit]").click(function (event) {
+    $.ajax(rekall.utils.call({
+      api: '/client/approver/request',
+      data: $("form").serializeArray(),
+      method: "POST",
+      error: rekall.utils.error,
+      success: function () {
+        rekall.utils.load(rekall.globals.controllers.home);
+      }
+    }));
+    event.preventDefault();
+  });
+
 </script>

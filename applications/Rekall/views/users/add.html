@@ -9,15 +9,15 @@
 </div>
 <script>
   $("input[type=submit]").click(function (event) {
-    $.ajax({
-      url: rekall.utils.api('/users/add'),
+    $.ajax(rekall.utils.call({
+      api: '/users/add',
       data: $("form").serializeArray(),
       method: "POST",
       error: rekall.utils.error,
       success: function () {
         rekall.utils.load(rekall.globals.controllers.manage_users);
       }
-    });
+    }));
     event.preventDefault();
   });
 </script>

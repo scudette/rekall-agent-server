@@ -15,6 +15,11 @@ indexes:
   - name: __key__
     direction: desc
 
+- kind: collections
+  properties:
+  - name: __key__
+    direction: desc
+
 - kind: flows
   properties:
   - name: __key__
@@ -24,7 +29,23 @@ indexes:
   properties:
   - name: client_id
   - name: timestamp
+
+- kind: flows
+  properties:
+  - name: client_id
+  - name: timestamp
     direction: desc
+
+- kind: hunts
+  properties:
+  - name: labels
+  - name: state
+  - name: timestamp
+
+- kind: hunts
+  properties:
+  - name: labels
+  - name: timestamp
 
 - kind: permissions
   properties:

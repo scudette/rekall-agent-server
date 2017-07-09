@@ -1,7 +1,35 @@
 {{extend response.layout_path}}
 
-<h2>Clients ({{=request.vars.q}})</h2>
-<table id="clients" class="display" cellspacing="0" width="100%"></table>
+<form id="query_form">
+<div class="input-group">
+  <span class="btn btn-default disabled input-group-addon" id="label">
+    <span class="glyphicon glyphicon-pencil" aria-hidden="true"
+          title="Label Clients"></span>
+  </span>
+  <input type="text" class="form-control"
+         value="{{=request.vars.q}}"
+         id="query" />
+  <span class="input-group-addon btn btn-default" id="search">
+    <span class="glyphicon glyphicon-search" aria-hidden="true"
+          id="search" title="Search"></span>&nbsp;
+  </span>
+</div>
+</form>
+
+<div class="table-container panel-body">
+  <table id="clients" class="display" cellspacing="0" width="100%"></table>
+</div>
+
 <script>
   rekall.clients.search_clients("{{=request.vars.q}}", "#clients")
+  rekall.utils.watch_checkboxes_to_disabled_button("#clients", "#label");
+  var handler = function () {
+    rekall.utils.load(
+      "{{=URL(c='clients', f='search')}}", {q: $("#query").val()});
+    return false;
+  };
+
+  $("#search").click(handler);
+  $("#query_form").submit(handler);
+  $("#label").click(function () {rekall.clients.label("#clients");});
 </script>

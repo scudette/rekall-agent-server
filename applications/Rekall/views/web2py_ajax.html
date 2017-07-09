@@ -20,7 +20,8 @@
     image_dir: "{{=URL('static', 'images')}}/",
 
     // Global location of various controllers.
-    controllers: {
+  controllers: {
+      home: "{{=URL(c='default', f='index')}}",
       client_search: "{{=URL(c='clients', f='search')}}",
       collection_view: "{{=URL(c='flows', f='collection_view')}}",
       download: "{{=URL(c='flows', f='download')}}",
@@ -29,11 +30,14 @@
       request_approval: "{{=URL(c='clients', f='request_approval')}}",
       manage_users: "{{=URL(c='users', f='manage')}}",
       approve_request: "{{=URL(c='clients', f='approve_request')}}",
+      approve_hunt_request: "{{=URL(c='hunts', f='approve_request')}}",
       inspect_list: "{{=URL(c='flows', f='inspect_list')}}",
       artifact_list: "{{=URL(c='artifacts', f='index')}}",
       save_flow: "{{=URL(c='flows', f='save')}}",
       api_call: "{{=URL(c='default', f='call')}}",
       download_flows: "{{=URL(c='flows', f='download')}}",
+      hunts_view: "{{=URL(c='hunts', f='view')}}",
+      hunts_list: "{{=URL(c='hunts', f='list')}}",
     },
 
     api_route: "{{=URL(c='api', f='run', host=True)}}",
@@ -54,7 +58,10 @@ response.files.append(URL('static','js/dataTables/DataTables-1.10.15/css/jquery.
 response.files.append(URL('static','js/dataTables/datatables.min.js'))
 response.files.append(URL('static','js/bootstrap.min.js'))
 response.files.append(URL('static','js/web2py-bootstrap3.js'))
+response.files.append(URL('static','jquery-ui-1.12.1.custom/jquery-ui.min.js'))
+response.files.append(URL('static','jquery-ui-1.12.1.custom/jquery-ui.min.css'))
 response.files.append(URL('static','js/ace/ace.js'))
+response.files.append(URL('static','js/ace/theme-monokai.js'))
 
 response.include_meta()
 response.include_files()

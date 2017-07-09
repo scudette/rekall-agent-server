@@ -28,7 +28,7 @@ pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
 }
 
 .table-container {
-    padding-top: 5px;
+    padding-top: 15px;
 }
 
 
@@ -63,4 +63,14 @@ button.right-square {
 
 .toolbar {
     margin-bottom: 10px;
+}
+
+.btn.input-group-addon {
+    color: #ffffff;
+    background-color: #3e3f3a;
+    border-color: transparent;
+}
+
+.ui-front.modal-autocomplete {
+    z-index: 100000;
 }
