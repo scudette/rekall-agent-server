@@ -260,6 +260,9 @@ api_dispatcher.register("/control/jobs", control.jobs,
 api_dispatcher.register("/control/ticket", control.ticket,
                         [users.require_client_authentication()])
 
+api_dispatcher.register("/control/hunt_ticket", control.hunt_ticket,
+                        [users.require_client_authentication()])
+
 api_dispatcher.register("/control/upload", control.upload,
                         [users.require_client_authentication()])
 
@@ -280,12 +283,11 @@ api_dispatcher.register("/plugin/get", plugins.get,
 # Get information about collections for a specific client.
 api_dispatcher.register("/collections/metadata", collections.metadata,
                         [require_csrf_token(),
-                         users.require_client("clients.view")])
+                         collections.require_collection_access])
 
 api_dispatcher.register("/collections/get", collections.get,
                         [require_csrf_token(),
-                         users.require_client("clients.view")])
-
+                         collections.require_collection_access])
 
 # Deal with flows. Must have at least Examiner access to the client.
 api_dispatcher.register("/flows/list", flows.list,
@@ -322,14 +324,22 @@ api_dispatcher.register("/flows/plugins/launch", flows.launch_plugin_flow,
                          users.require_client("flows.create")])
 
 
-api_dispatcher.register("/hunts/launch", hunts.launch_from_flows,
+api_dispatcher.register("/hunts/propose", hunts.propose_from_flows,
                         [require_csrf_token(),
-                         users.require_application("hunts.create")])
+                         users.require_application("hunts.propose")])
 
+api_dispatcher.register("/hunts/approve", hunts.grant_approval,
+                        [require_csrf_token(),
+                         users.require_application("hunts.approve")])
 
 api_dispatcher.register("/hunts/list", hunts.list,
                         [require_csrf_token(),
                          users.require_application("hunts.view")])
+
+api_dispatcher.register("/hunts/results", hunts.results,
+                        [require_csrf_token(),
+                         users.require_application("hunts.view")])
+
 
 
 # File uploads.

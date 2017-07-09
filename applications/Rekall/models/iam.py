@@ -1,5 +1,4 @@
 import datetime
-import uuid
 
 from api import users
 from api import types
@@ -30,7 +29,7 @@ db.define_table('notifications',
                 Field('read', type='boolean', default=False))
 
 db.define_table('tokens',
-                Field('token_id', default=uuid.uuid4),
+                Field('token_id'),
                 Field('delegator'),
                 Field('role'),
                 Field('resource'),

@@ -23,6 +23,7 @@
   permissions:
     - clients.approve
     - artifacts.viewer
+    - hunts.approve
 
 - role: Examiner
   description: >-
@@ -44,6 +45,7 @@
     - flows.create
     - clients.view
     - flows.view
+    - hunts.propose
 
 - role: Administrator
   description: >-
@@ -57,7 +59,7 @@
     - artifact.write
     - canned_flow.write
     - clients.label
-    - hunts.create
+    - hunts.approve
 
 - role: Delegator
   description: >-

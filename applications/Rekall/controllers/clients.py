@@ -22,16 +22,11 @@ def request_approval():
                   SELECT(*sorted(approvers),
                          _name="approver",
                          requires=IS_IN_SET(approvers)),
+                  INPUT(_name="client_id", _value=client_id,
+                        _type="hidden"),
         ]
 
         form = utils.build_form(inputs)
-        if form.accepts(request, session):
-            # Request an approval from the API
-            api.api_dispatcher.call(
-                current, "client.approver.request", client_id,
-                form.vars.approver, form.vars.role)
-            #redirect(URL(c="default", f="index"))
-
         return dict(form=form, client_id=client_id)
 
 

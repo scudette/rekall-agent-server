@@ -1,5 +1,18 @@
+import uuid
 import gluon
 from gluon import html
+
+
+def new_hunt_id():
+    return "H." + str(uuid.uuid4())[:16]
+
+
+def new_collection_id():
+    return "CL." + str(uuid.uuid4())[:16]
+
+
+def new_flow_id():
+    return "F." + str(uuid.uuid4())[:16]
 
 
 def route_api(endpoint, *args, **kwargs):
@@ -16,7 +29,7 @@ def build_form(inputs, with_submit=True, **kwargs):
         input.attributes["_class"] = "form-control"
         name = input.attributes["_name"]
 
-        if (input.attributes["_type"] != "hidden"):
+        if (input.attributes.get("_type") != "hidden"):
             elements.append(html.DIV(
                 html.LABEL(name,
                            _class="col-sm-2 control-label",

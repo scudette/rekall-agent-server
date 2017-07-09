@@ -7,6 +7,7 @@ from rekall_lib.types import client
 from rekall_lib.types import location
 
 from google.appengine.ext import blobstore
+from google.appengine.ext import ndb
 from google.appengine.api import app_identity
 
 from api import utils
@@ -87,6 +88,7 @@ def jobs(current, last_flow_time=0):
             utils.BaseValueList(row.custom_labels))
         for hunts in db(
             db.hunts.labels.belongs(labels) &
+            (db.hunts.state == "Started") &
             (db.hunts.timestamp > last_flow_time)).select():
             result.flows.append(hunts.flow)
 
@@ -141,11 +143,13 @@ def file_upload_receive(current, upload_request):
     return dict()
 
 
-def upload(current, type, collection_id, part=0):
+def upload(current, type, flow_id, part=0):
+    collection_id = utils.new_collection_id()
     result = location.BlobUploadSpecs.from_keywords(
         url=blobstore.create_upload_url(
             utils.route_api("/control/upload_receive",
                             type=type,
+                            flow_id=flow_id,
                             collection_id=collection_id,
                             part=part, client_id=current.client_id),
             gs_bucket_name=app_identity.get_default_gcs_bucket_name())
@@ -153,7 +157,8 @@ def upload(current, type, collection_id, part=0):
     return result
 
 
-def upload_receive(current, type, collection_id, part=0, client_id=None):
+def upload_receive(current, type, collection_id, flow_id, client_id,
+                   part=0):
     """Handle GCS callback.
 
     The user uploads to GCS directly and once the upload is complete, GCS calls
@@ -167,10 +172,46 @@ def upload_receive(current, type, collection_id, part=0, client_id=None):
 
     db.collections.update_or_insert(
         db.collections.collection_id == collection_id,
+        flow_id=flow_id,
         client_id=client_id,
         collection_id=collection_id,
         part=part,
         blob_key=blob_key,
         gs_object_name=gs_object_name)
+
+    return dict()
+
+# TODO: Implement sharded counters as per
+# https://cloud.google.com/appengine/articles/sharding_counters?csw=1
+@ndb.transactional
+def update_stats(row, flow_stat, new_record):
+    status = row.status
+    if new_record:
+        status.total_clients += 1
+
+    if flow_stat.status == "Done":
+        status.total_success += 1
+    elif flow_stat.status in ["Error", "Crash"]:
+        status.total_errors += 1
+
+    row.update_record(status=status)
+
+
+def hunt_ticket(current, hunt_id):
+    """Client use this to report the progress of a hunt."""
+    db = current.db
+    row = db(db.hunts.hunt_id == hunt_id).select().first()
+    if row:
+        # Update the status from the client.
+        status = agent.FlowStatus.from_json(current.request.body.getvalue())
+        if status.client_id == current.client_id:
+            new_id = db.hunt_status.update_or_insert(
+                (db.hunt_status.hunt_id == hunt_id) &
+                (db.hunt_status.client_id == current.client_id),
+                hunt_id=hunt_id,
+                client_id=current.client_id,
+                status=status)
+
+        update_stats(row, status, new_id is not None)
 
     return dict()

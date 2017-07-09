@@ -176,8 +176,18 @@ db.define_table('hunts',
                       comment="Flow object to be sent to the client."),
                 Field('creator', type='string',
                       comment="Username that created the flow"),
+                Field('state',
+                      comment="The State of this hunt: Pending, "
+                      "Started, Stopped"),
                 Field('status', type=dal.SerializerType(agent.HuntStatus),
                       comment="The latest Flow status."))
+
+db.define_table('hunt_status',
+                Field('hunt_id',
+                      comment="The hunt id"),
+                Field('client_id',
+                      comment="The client ID"),
+                Field('status', type=dal.SerializerType(agent.FlowStatus)))
 
 
 db.define_table('collections',

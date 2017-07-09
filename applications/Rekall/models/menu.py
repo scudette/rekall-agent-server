@@ -41,7 +41,7 @@ def InitializeMenu():
         ]))
 
     response.menu.append(
-        (T("Hunts"), False, URL(c="hunts", f="view")))
+        (T("Hunts"), True, URL(c="hunts", f="view")))
 
     # User is administrator - show them the users menu..
     if users.check_permission(current, "users.admin", "/"):

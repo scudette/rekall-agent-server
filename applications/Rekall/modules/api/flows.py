@@ -1,6 +1,5 @@
 """API implementations for interacting with flows."""
 import time
-import uuid
 
 from gluon import html
 from rekall_lib.types import actions
@@ -20,12 +19,18 @@ def list(current, client_id):
     if client_id:
         for row in db(db.flows.client_id == client_id).select(
             orderby=~db.flows.timestamp):
+            # TODO: This might be a bit slow. Think about reworking the UI to be
+            # more efficient here.
+            collection_ids = [
+                x.collection_id for x in
+                db(db.collections.flow_id == row.flow.flow_id).select()]
+
             flows.append(dict(
                 flow=row.flow.to_primitive(),
                 timestamp=row.timestamp,
                 creator=row.creator,
                 status=row.status.to_primitive(),
-                collection_ids=row.status.collection_ids,
+                collection_ids=collection_ids,
             ))
 
     return dict(data=flows)
@@ -34,8 +39,7 @@ def list(current, client_id):
 def launch_plugin_flow(current, client_id, rekall_session, plugin, plugin_arg):
     """Launch the flow on the client."""
     db = current.db
-    collection_id = unicode(uuid.uuid4())
-    flow_id = unicode(uuid.uuid4())
+    flow_id = utils.new_flow_id()
     flow = agent.Flow.from_keywords(
         flow_id=flow_id,
         created_time=time.time(),
@@ -56,13 +60,12 @@ def launch_plugin_flow(current, client_id, rekall_session, plugin, plugin_arg):
                  rekall_session=rekall_session,
                  collection=dict(
                      __type__="JSONCollection",
-                     id=collection_id,
                      location=dict(
                          __type__="BlobUploader",
                          base=html.URL(
                              c="api", f="control", args=['upload'], host=True),
                          path_template=(
-                             "collection/%s/{part}" % collection_id),
+                             "collection/%s/{part}" % flow_id),
                      ))
             )])
 
@@ -76,11 +79,8 @@ def launch_plugin_flow(current, client_id, rekall_session, plugin, plugin_arg):
             status="Pending"),
         creator=users.get_current_username(current),
         flow=flow,
+        timestamp=flow.created_time.timestamp,
     )
-
-    db.collections.insert(
-        collection_id=collection_id,
-        flow_id=flow_id)
 
     firebase.notify_client(client_id)
 
@@ -154,20 +154,18 @@ def launch_canned_flows(current, client_id, name):
     if not row:
         raise ValueError("There is no canned flow with name '%s'" % name)
 
+    flow_id = utils.new_flow_id()
     for action in row.flow.actions:
-        collection_id = unicode(uuid.uuid4())
         action.collection = dict(
             __type__="JSONCollection",
-            id=collection_id,
             location=dict(
                 __type__="BlobUploader",
                 base=html.URL(
                     c="api", f="control", args=['upload'], host=True),
                 path_template=(
-                    "collection/%s/{part}" % collection_id),
+                    "collection/%s/{part}" % flow_id),
             ))
 
-    flow_id = unicode(uuid.uuid4())
     flow = agent.Flow.from_keywords(
         name=name,
         flow_id=flow_id,
@@ -191,11 +189,8 @@ def launch_canned_flows(current, client_id, name):
             status="Pending"),
         creator=users.get_current_username(current),
         flow=flow,
+        timestamp=flow.created_time.timestamp,
     )
-
-    db.collections.insert(
-        collection_id=collection_id,
-        flow_id=flow_id)
 
     firebase.notify_client(client_id)
 

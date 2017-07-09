@@ -43,7 +43,7 @@ search.args = collections.OrderedDict(
     "match. Otherwise we search for a hostname prefix.")
 
 
-def list_approvers(current, client_id):
+def list_approvers(current):
     """List users which can approve client access."""
     db = current.db
     # TODO: implement conditions.

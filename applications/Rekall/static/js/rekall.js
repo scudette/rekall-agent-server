@@ -60,14 +60,14 @@ rekall.utils.api = function(endpoint) {
 // header etc. The returned object should be sent to $.ajax for actual
 // processing.
 rekall.utils.call = function(obj) {
+  var headers = obj.headers || {};
+  headers["x-rekall-csrf-token"] = rekall.csrf_token;
   return {
     method: obj.method,
     xhr: obj.xhr,
     dataType: "json",
     url: rekall.utils.api(obj.api),
-    headers: {
-      "x-rekall-csrf-token": rekall.csrf_token
-    },
+    headers: headers,
     data: obj.data,
     success: obj.success,
     error: obj.error
@@ -442,11 +442,11 @@ rekall.templates.flow_download_script = function(metadatas) {
 echo Fetching flow $FLOW_ID
 mkdir -p $FLOW_ID
 `;
-    if (metadata.status.collection_ids) {
+    if (metadata.collection_ids) {
       result += "mkdir -p $FLOW_ID/collections/\n";
-      for (var j=0; j<metadata.status.collection_ids.length; j++) {
+      for (var j=0; j<metadata.collection_ids.length; j++) {
         result += "export COLLECTION_ID='" +
-            metadata.status.collection_ids[j] + "'\n";
+            metadata.collection_ids[j] + "'\n";
         result += "wget --output-document=$FLOW_ID/collections/$COLLECTION_ID.json \\\n";
         result += "  \"$API_ENDPOINT/collections/get?client_id=$CLIENT_ID&collection_id=$COLLECTION_ID&token=$TOKEN\" \n";
       }
@@ -489,6 +489,11 @@ rekall.templates.create_hunt_from_flows = function(labels, flow_ids) {
        <span class="caret"></span>
      </span>
   </div>
+  <div class="input-group ui-widget">
+    <span class="input-group-addon" id="basic-addon1">Approvers</span>
+    <select multiple class="form-control" id="approvers"
+     placeholder="Comma separated list of approvers.">
+  </div>
 </div>
 `).append(rekall.templates.error_message_container());
 
@@ -498,6 +503,18 @@ rekall.templates.create_hunt_from_flows = function(labels, flow_ids) {
   function extractLast( term ) {
     return split( term ).pop();
   }
+
+  $.ajax(rekall.utils.call({
+    api: "/client/approver/list",
+    error: rekall.utils.error_container,
+    success: function(data) {
+      var selector = $("#approvers");
+      for (var i=0; i<data.data.length; i++) {
+        var user = data.data[i];
+        selector.append($("<option>").attr("value", user).text(user));
+      }
+    }
+  }));
 
   var labels_input = result.find("#labels");
   result.find("#label_complete").click(function () {
@@ -538,20 +555,24 @@ rekall.templates.create_hunt_from_flows = function(labels, flow_ids) {
   });
 
   var button = $("<button class='btn btn-default' id='launch'>")
-      .text("Launch")
+      .text("Propose")
       .click(function() {
         var labels = split($("#labels").val());
-        $.ajax(rekall.utils.call({
-          api: "/hunts/launch",
-          data: {
-            labels: labels,
-            flow_ids: flow_ids
-          },
-          error: rekall.utils.error_container,
-          success: function() {
-            rekall.utils.load(rekall.globals.controllers.hunts_view);
-          }
-        }));
+        var approvers = $("#approvers").val();
+        if (labels && approvers) {
+          $.ajax(rekall.utils.call({
+            api: "/hunts/propose",
+            data: {
+              labels: labels,
+              flow_ids: flow_ids,
+              approvers: approvers,
+            },
+            error: rekall.utils.error_container,
+            success: function() {
+              rekall.utils.load(rekall.globals.controllers.hunts_view);
+            }
+          }));
+        };
       });
 
   return rekall.templates.modal_template(result, "Run Flow as Hunt", button);
@@ -1007,9 +1028,8 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
         // Permission denied means the user has no access to the client. Launch
         // the approval workflow.
         if (jqXHR.status == 403) {
-          window.location.replace(
-              rekall.globals.controllers.request_approval + "?" + $.param({
-                client_id: client_id}));
+          rekall.utils.load(rekall.globals.controllers.request_approval,
+                            {client_id: client_id});
         } else {
           rekall.utils.error(jqXHR);
         };
@@ -1063,7 +1083,7 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
       },
       {
         title: "Collections",
-        data: "status.collection_ids",
+        data: "collection_ids",
         render: rekall.cell_renderers.collection_ids_renderer,
       },
       {
@@ -1226,8 +1246,8 @@ rekall.flows.delete_canned_flows = function(selector) {
     if (this.checked) selected_names.push(this.value);
   });
 
-  $.ajax({
-    url: rekall.utils.api("/flows/delete_canned"),
+  $.ajax(rekall.utils.call({
+    api: "/flows/delete_canned",
     data: {
       names: selected_names,
     },
@@ -1235,7 +1255,7 @@ rekall.flows.delete_canned_flows = function(selector) {
     success: function() {
       rekall.utils.load(window.location.href);
     }
-  });
+  }));
 }
 
 rekall.flows.download = function (client_id, selector) {
@@ -1296,6 +1316,7 @@ rekall.hunts.view = function(selector) {
     ajax: rekall.utils.call({
       api: "/hunts/list",
     }),
+    order: [[ 2, 'desc' ]],
     columns: [
       {
         title: '<input id="select_all" type="checkbox">',
@@ -1308,6 +1329,17 @@ rekall.hunts.view = function(selector) {
         }
       },
       {
+        title: "",
+        data: "flow",
+        render: function(flow, type, row, meta) {
+          return rekall.utils.make_link(
+              rekall.globals.controllers.hunts_list + "?" + $.param({
+                hunt_id: flow.flow_id
+              }),
+              'launch-icon.png');
+        }
+      },
+      {
         title: "Created",
         data: "timestamp",
         render: function(timestamp, type, row, meta) {
@@ -1315,7 +1347,7 @@ rekall.hunts.view = function(selector) {
         }
       },
       {
-        title: "Flow",
+        title: "Hunt Id",
         data: "flow",
         render: function(flow, type, row, meta) {
           var text = flow.name;
@@ -1333,6 +1365,10 @@ rekall.hunts.view = function(selector) {
         render: function(labels, type, row, meta) {
           return labels.join(",");
         },
+      },
+      {
+        title: "State",
+        data: "state",
       },
       {
         title: "Status",
@@ -1355,6 +1391,46 @@ rekall.hunts.view = function(selector) {
       status_cache, "status", "Flow Status", selector,
       rekall.cell_renderers.status_detailed_renderer);
 }
+
+
+rekall.hunts.results = function(selector, hunt_id) {
+  var status_cache = {};
+
+  $(selector).DataTable({
+    ajax: rekall.utils.call({
+      api: "/hunts/results",
+      data: {
+        hunt_id: hunt_id
+      },
+    }),
+    columns: [
+      {
+        title: "Client",
+        data: "client_id",
+      },
+      {
+        title: "Status",
+        data: "status",
+        render: function(status, type, row, meta) {
+          var text = status.status;
+          return rekall.cell_renderers.generic_json_pp(
+              status_cache, text, "status",
+              status, type, row, meta);
+        },
+      },
+      {
+        title: "Collections",
+        data: "collection_ids",
+        render: rekall.cell_renderers.collection_ids_renderer,
+      },
+    ]
+  });
+
+  rekall.cell_renderers.generic_json_pp_clicks(
+      status_cache, "status", "Flow Status", selector,
+      rekall.cell_renderers.status_detailed_renderer);
+}
+
 
 
 rekall.uploads = {}
@@ -1416,7 +1492,7 @@ rekall.uploads.hex_view = function(upload_id, selector) {
 
   var url = (rekall.globals.controllers.download +
       "?" + $.param({upload_id: upload_id}));
-  $.ajax({
+  $.ajax(rekall.utils.call({
     url: url,
     type: "GET",
     responseType: 'arraybuffer',
@@ -1466,7 +1542,7 @@ rekall.uploads.hex_view = function(upload_id, selector) {
             "Showing content " + start + " - " + end + " / " + total_length));
       }
     }
-  });
+  }));
 }
 
 // Cell renderers for DataTables
@@ -1644,6 +1720,20 @@ rekall.cell_renderers.notification_message = function(
     return result.html();
   }
 
+  if (message_id == "HUNT_APPROVAL_REQUEST") {
+    var result = $("<div>Please <a class='link'>approve</a> hunt <b></b>.</div>");
+    hunt_id = rekall.utils.get(row.args, "hunt_id", "");
+    user = rekall.utils.get(row.args, "user", "");
+    result.find("b").text(hunt_id);
+    result.find("a").attr(
+        "href",
+        rekall.globals.controllers.approve_hunt_request + "?" + $.param({
+          hunt_id: hunt_id,
+          user: user,
+        }));
+    return result.html();
+  }
+
   // Message id not recognized so we just include it as text.
   return rekall.utils.safe_html(message_id);
 }
@@ -1755,6 +1845,7 @@ rekall.users.show_notifications = function() {
     ajax: rekall.utils.call({
       api: "/users/notifications/read",
     }),
+    order: [[ 1, 'desc' ]],
     columns: [
       {
         title: "From",
