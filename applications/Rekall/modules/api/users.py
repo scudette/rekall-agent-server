@@ -5,6 +5,8 @@ import urlparse
 import yaml
 
 from api import types
+from api import utils
+
 from gluon import http
 from google.appengine.api import users
 
@@ -296,7 +298,6 @@ def require_client_authentication():
     new key which hashes to the same client id as another client.
     """
     def wrapper(current):
-        # Signatures are sent in this special header.
         header = current.request.env['HTTP_X_REKALL_SIGNATURE']
         if not header:
             raise PermissionDenied()
@@ -384,8 +385,10 @@ def mint_token(current, role, resource):
         raise PermissionDenied("token.mint", "/")
 
     db = current.db
-    id = db.tokens.insert(delegator=get_current_username(current),
-                          role=role,
-                          resource=resource)
+    token_id = utils.new_token_id()
+    db.tokens.insert(delegator=get_current_username(current),
+                     token_id=token_id,
+                     role=role,
+                     resource=resource)
 
-    return dict(token=db.tokens[id].token_id)
+    return dict(token=token_id)

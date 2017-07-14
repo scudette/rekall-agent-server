@@ -32,7 +32,8 @@ def uploads_view():
 
 def hex_view():
     upload_id = request.vars.upload_id
-    return dict(upload_id=upload_id)
+    offset = request.vars.offset or 0
+    return dict(upload_id=upload_id, offset=offset)
 
 
 def list_canned():
@@ -174,7 +175,7 @@ class FormBuilder(object):
         if value is None:
             return value
 
-        type = desc['type']
+        type = desc.get('type', "String")
         if type == 'Boolean':
             state = value == "on"
             if state == desc.get('default', False):
@@ -207,6 +208,8 @@ class FormBuilder(object):
 class SessionFormBuilder(FormBuilder):
 
     default_session_parameters = dict(
+        flow_precondition="",
+        also_upload_files=False,
         cpu_quota=60,
         load_quota=50,
         verbose=False,
@@ -292,20 +295,6 @@ def launch():
             URL(f="inspect_list", vars=dict(client_id=client_id)))
 
     return dict(**view_args)
-
-
-def download():
-    upload_id = request.vars.upload_id
-    filename = request.vars.filename or "download_" + upload_id
-    if upload_id:
-        row = db(db.uploads.id == upload_id).select().first()
-        if row:
-            response.headers[blobstore.BLOB_KEY_HEADER] = row.blob_key
-            response.headers["Content-Type"] = "application/octet-stream"
-            response.headers["Content-Disposition"] = (
-                'attachment; filename="%s"' % xmlescape(filename))
-        else:
-            raise HTTP(404, "not found")
 
 
 def collection_view():

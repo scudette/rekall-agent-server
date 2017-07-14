@@ -110,20 +110,21 @@ def ticket(current, flow_id):
 
 # Interact with FileUploadLocationImpl
 
-def file_upload(current, upload_request):
+def file_upload(current):
     """Request an upload ticket for commencing file upload."""
     upload_request = location.FileUploadRequest.from_json(
-        upload_request)
+        current.request.body.getvalue())
 
     return location.FileUploadResponse.from_keywords(
         url=blobstore.create_upload_url(
             utils.route_api("/control/file_upload_receive",
-                            upload_request=upload_request.to_json()),
+                            upload_request=upload_request.to_json(),
+                            client_id=current.client_id),
             gs_bucket_name=app_identity.get_default_gcs_bucket_name())
     ).to_primitive()
 
 
-def file_upload_receive(current, upload_request):
+def file_upload_receive(current, upload_request, client_id):
     upload_request = location.FileUploadRequest.from_json(
         upload_request)
     db = current.db
@@ -138,7 +139,8 @@ def file_upload_receive(current, upload_request):
     db.upload_files.insert(
         file_information=upload_request.file_information.to_primitive(),
         upload_id=upload_id,
-        flow_id=upload_request.flow_id)
+        flow_id=upload_request.flow_id,
+        client_id=client_id)
 
     return dict()
 

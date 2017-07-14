@@ -25,12 +25,17 @@ def list(current, client_id):
                 x.collection_id for x in
                 db(db.collections.flow_id == row.flow.flow_id).select()]
 
+            file_ids = [
+                x.upload_id for x in
+                db(db.upload_files.flow_id == row.flow.flow_id).select()]
+
             flows.append(dict(
                 flow=row.flow.to_primitive(),
                 timestamp=row.timestamp,
                 creator=row.creator,
                 status=row.status.to_primitive(),
                 collection_ids=collection_ids,
+                file_ids=file_ids,
             ))
 
     return dict(data=flows)
@@ -43,10 +48,6 @@ def launch_plugin_flow(current, client_id, rekall_session, plugin, plugin_arg):
     flow = agent.Flow.from_keywords(
         flow_id=flow_id,
         created_time=time.time(),
-        #file_upload=dict(
-        #    __type__="FileUploadLocation",
-        #    flow_id=flow_id,
-        #    base=html.URL(c="control", f='file_upload', host=True)),
         ticket=dict(
             location=dict(
                 __type__="HTTPLocation",
@@ -68,6 +69,13 @@ def launch_plugin_flow(current, client_id, rekall_session, plugin, plugin_arg):
                              "collection/%s/{part}" % flow_id),
                      ))
             )])
+
+    if rekall_session.get("also_upload_files"):
+        flow.file_upload = dict(
+            __type__="FileUploadLocation",
+            flow_id=flow_id,
+            base=html.URL(c="api", f='control/file_upload',
+                          host=True))
 
     db.flows.insert(
         flow_id=flow_id,

@@ -6,6 +6,7 @@ rekall.utils.load = function(url, data) {
     url += "?" + $.param(data);
   };
 
+  $(".loading").toggleClass("disabled", false);
   $.ajax({
     url: url,
     headers: {
@@ -17,6 +18,7 @@ rekall.utils.load = function(url, data) {
         window.history.pushState({url: url}, "", url);
       }
       $("#modal").modal("hide");
+      $(".loading").toggleClass("disabled", true);
     }
   });
 }
@@ -32,6 +34,7 @@ rekall.utils.submit_form = function(obj) {
   } else {
     data = $(selector).serializeArray();
   }
+  $(".loading").toggleClass("disabled", false);
   $.ajax({
     url: url,
     method: method,
@@ -47,6 +50,8 @@ rekall.utils.submit_form = function(obj) {
 
       if (obj.next) {
         rekall.utils.load(obj.next, obj.data);
+      } else {
+        $(".loading").toggleClass("disabled", true);
       }
     }
   });
@@ -60,18 +65,12 @@ rekall.utils.api = function(endpoint) {
 // header etc. The returned object should be sent to $.ajax for actual
 // processing.
 rekall.utils.call = function(obj) {
-  var headers = obj.headers || {};
-  headers["x-rekall-csrf-token"] = rekall.csrf_token;
-  return {
-    method: obj.method,
-    xhr: obj.xhr,
-    dataType: "json",
-    url: rekall.utils.api(obj.api),
-    headers: headers,
-    data: obj.data,
-    success: obj.success,
-    error: obj.error
-  };
+  if (!obj.headers) obj.headers = {};
+  obj.headers["x-rekall-csrf-token"] = rekall.csrf_token;
+
+  if (!obj.dataType) obj.dataType = "json";
+  obj.url = rekall.utils.api(obj.api);
+  return obj;
 }
 
 rekall.utils.escape_text = function(text) {
@@ -87,11 +86,8 @@ rekall.utils.get = function(obj, item, def) {
 }
 
 rekall.utils.make_link = function(url, image) {
-  var link = $("<a class='link'>");
-  link.attr("href", url);
-  var img = $("<img class='icon'>");
-  img.attr("src", rekall.globals.image_dir + image);
-  link.append(img);
+  var link = $("<a class='link rekall-glyphicon'>").attr("href", url).append(
+      $("<span class='glyphicon' aria-hidden='true'>").addClass(image));
   return link.prop('outerHTML');
 }
 
@@ -274,12 +270,12 @@ rekall.templates.mint_token = function(roles) {
         <ul class="dropdown-menu">
         </ul>
       </div>
-      <input type="text" id="resource" class="form-control"
+      <input type="text" id="resource" name="resource" class="form-control"
              placeholder="Resource path...">
    </div>
    <div class="input-group input-group-lg">
      <div class="input-group-btn">
-       <button type="button" class="btn btn-default" id="mint">Mint</button>
+       <button type="button" class="btn btn-default" id="get_mint">Mint</button>
      </div>
      <input type="text" id="token" class="form-control"
             placeholder="Click to generate..."">
@@ -297,7 +293,7 @@ rekall.templates.mint_token = function(roles) {
     link.text(roles[i]).appendTo($("<li>").appendTo(ul));
   }
 
-  result.find("#mint").click(function () {
+  result.find("#get_mint").click(function () {
     var role = $("#role").text();
     var resource = $("#resource").val();
     if (!resource) {
@@ -808,12 +804,10 @@ rekall.clients.search_clients = function (query, selector) {
         searchable: false,
         orderable: false,
         render: function(client_id, type, row, meta) {
-          var link = $("<a href='#' class='client_id_link'>")
-              .attr("data_client_id", client_id);
-
-          $("<img class='icon'>")
-              .attr("src", rekall.globals.image_dir + 'launch-icon.png')
-              .appendTo(link);
+          var link = $(`
+<a class='client_id_link rekall-glyphicon'>
+  <span class='glyphicon glyphicon glyphicon-tasks'
+        aria-hidden='true'>`).attr("data_client_id", client_id);
 
           return link.prop('outerHTML');
         },
@@ -967,14 +961,12 @@ rekall.flows.list_plugins = function(launch_url, client_id, selector) {
         data: "plugin",
         searchable: false,
         render: function (plugin, type, full, meta) {
-          var img = $("<img class='icon'>");
-          img.attr("src", rekall.globals.image_dir + 'launch-icon.png');
-          var link = $("<a class='link'>");
-          link.append(img);
-          link.attr("href", launch_url + "?" + $.param({
-            plugin: plugin,
-            client_id: client_id
-          }));
+          var link = $(`<a class='link rekall-glyphicon'>
+  <span class='glyphicon glyphicon glyphicon-pencil'
+        aria-hidden='true'>`).attr("href", launch_url + "?" + $.param({
+          plugin: plugin,
+          client_id: client_id
+        }));
           return link.prop("outerHTML");
         },
       },
@@ -1088,12 +1080,8 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
       },
       {
         title: "Files",
-        data: "flow",
-        render: function(flow, type, row, meta) {
-          return rekall.utils.make_link(
-              rekall.globals.controllers.uploads_view + "?" + $.param({
-                flow_id: flow.flow_id}), "launch-icon.png");
-        }
+        data: "file_ids",
+        render: rekall.cell_renderers.upload_ids_renderer,
       },
     ],
   });
@@ -1486,24 +1474,70 @@ rekall.uploads.list_uploads_for_flow = function(flow_id, selector) {
       file_info_cache, "finfo", "File Information", selector);
 }
 
-rekall.uploads.hex_view = function(upload_id, selector) {
+rekall.uploads.build_pagination = function(offset, length, page_size) {
+  var number_of_pages = 10;
+  var max_pages = Math.max(number_of_pages, parseInt(length / page_size));
+  var current_page = parseInt(offset / page_size);
+
+  var result = $('<ul class="pagination-sm pagination">');
+  var first = $('<li class="page-item first">');
+  if (current_page == 0) first.addClass("disabled");
+  first.append('<a href="#" class="page-link" data-page="0">First</a>');
+
+  var prev = $('<li class="page-item prev">');
+  if (current_page == 0) prev.addClass("disabled");
+  prev.append($('<a href="#" class="page-link">Prev</a>')
+      .attr("data-page", Math.max(0, current_page-1)));
+
+  var next = $('<li class="page-item next">');
+  if (current_page == max_pages) next.addClass("disabled");
+  next.append($('<a href="#" class="page-link">Next</a>')
+      .attr("data-page", Math.min(max_pages, current_page+1)));
+
+  var last = $('<li class="page-item last">');
+  if (current_page == max_pages) last.addClass("disabled");
+  last.append($('<a href="#" class="page-link">Last</a>')
+      .attr("data-page", max_pages));
+
+  result.append(first);
+  result.append(prev);
+
+  var first_page = Math.max(0, current_page - number_of_pages / 2);
+  var last_page = Math.min(first_page + number_of_pages, max_pages);
+
+  for (var i=first_page; i<last_page; i++) {
+    var link = $("<a href='#' class='page-link'>").attr('data-page', i).text(i);
+    var button = $('<li class="page-item">').append(link);
+    if (current_page == i) button.addClass("active");
+    result.append(button);
+  }
+
+  result.append(next);
+  result.append(last);
+
+  return result;
+}
+
+
+rekall.uploads.hex_view = function(upload_id, offset, selector) {
   var width = 32;
   var height = 200;
+  var page_size = width * height;
 
-  var url = (rekall.globals.controllers.download +
-      "?" + $.param({upload_id: upload_id}));
   $.ajax(rekall.utils.call({
-    url: url,
-    type: "GET",
+    api: "/uploads/download",
+    data: {
+      upload_id: upload_id,
+    },
+    type: "POST",
     responseType: 'arraybuffer',
     dataType: "binary",
     headers: {
-      "Range": ("bytes=0-" + (width * height)),
+      "Range": ("bytes=" + parseInt(offset) + "-" + (offset + page_size)),
     },
-    processData: false,
     success: function(result, textStatus, request){
       var content_range = request.getResponseHeader('Content-Range');
-      var match = new RegExp(".+([0-9]+)-([0-9]+)/([0-9]+)$").exec(
+      var match = new RegExp(" ([0-9]+)-([0-9]+)/([0-9]+)$").exec(
           content_range || "");
       if (match) {
         var start = parseInt(match[1]);
@@ -1538,8 +1572,20 @@ rekall.uploads.hex_view = function(upload_id, selector) {
 
       $(selector).html(result);
       if(match) {
-        $(selector).before($("<div>").text(
-            "Showing content " + start + " - " + end + " / " + total_length));
+        $("#description").text(
+            "Showing content " + start + " - " + end + " / " + total_length);
+
+        var paginator = rekall.uploads.build_pagination(
+            start, total_length, page_size);
+        paginator.on('click', 'a.page-link', function () {
+          var page = $(this).attr('data-page');
+          if (page != null) {
+            rekall.uploads.hex_view(upload_id, page * page_size, '#plugins');
+          }
+          return false;
+        });
+        $("#pagination").html(paginator);
+
       }
     }
   }));
@@ -1632,35 +1678,27 @@ rekall.cell_renderers.generic_ajax_clicks = function(
 }
 
 rekall.cell_renderers.generic_json_renderer = function(obj) {
-  return rekall.utils.jsonSyntaxHighlight(
-      JSON.stringify(obj, undefined, 4))
+  return $("<pre>").RekallJsonViewer(obj, {collapsed: false});
 }
 
 rekall.cell_renderers.status_detailed_renderer = function(status) {
-  var result = "";
-
-  var json = rekall.utils.jsonSyntaxHighlight(
-      JSON.stringify(status, undefined, 4));
+  var json = $("<pre>").RekallJsonViewer(status, {collapsed: false});
 
   if (status.status == "Error") {
-    var pre = $("<pre>");
-    pre.text(status.backtrace);
-    result += "<h3>Backtrace</h2>";
-    result += pre.prop("outerHTML");
-    result += `<a class="btn btn-primary" role="button" data-toggle="collapse"
-        href="#jsonDetails" aria-expanded="false" aria-controls="jsonDetails">
+    var result = $(`<span><h3>Backtrace</h3><pre></pre>
+      <a class="btn btn-primary" role="button"
+         data-toggle="collapse"
+         href="#jsonDetails" aria-expanded="false"
+         aria-controls="jsonDetails">
         More details
-        </a>`;
-
-    result += '<div class="collapse" id="jsonDetails">';
-    result += json;
-    result += '</div>';
-
-  } else {
-    result +=  json;
+        </a>
+      <div class="collapse" id="jsonDetails"></div>`);
+    result.find("pre").text(status.backtrace);
+    result.find("#jsonDetails").append(json);
+    return result;
   }
 
-  return result;
+  return json;
 }
 
 // A renderer to show some important information about the flow.
@@ -1691,7 +1729,25 @@ rekall.cell_renderers.collection_ids_renderer = function(
           collection_id: collection_ids[i],
           client_id: row.status.client_id
         }),
-        "launch-icon.png");
+        "glyphicon-book");
+  }
+
+  return result;
+}
+
+rekall.cell_renderers.upload_ids_renderer = function(
+    upload_ids, type, row, meta) {
+  var result = "";
+  if (!upload_ids) {
+    return result;
+  }
+
+  for (var i=0; i<upload_ids.length; i++) {
+    result += rekall.utils.make_link(
+        rekall.globals.controllers.hex_view + "?" + $.param({
+          upload_id: upload_ids[i],
+        }),
+        "glyphicon-file");
   }
 
   return result;
@@ -2060,7 +2116,7 @@ window.onpopstate = function(event) {
       data = {},
       method = "GET"
     }
-
+    $(".loading").toggleClass("disabled", false);
     $.ajax({
       url: event.state.url,
       method: method,
@@ -2070,8 +2126,210 @@ window.onpopstate = function(event) {
       },
       success: function(data) {
         $("#main").html(data);
+        $(".loading").toggleClass("disabled", true);
       }
     });
     event.preventDefault();
   }
-}
+};
+
+
+/**
+ * jQuery json-viewer based on original code by
+ * @author: Alexandre Bodelot <alexandre.bodelot@gmail.com>
+ * https://github.com/abodelot/jquery.json-viewer
+ */
+(function($) {
+
+  /**
+   * Check if arg is either an array with at least 1 element, or a dict with at least 1 key
+   * @return boolean
+   */
+  function isCollapsable(arg) {
+    return arg instanceof Object && Object.keys(arg).length > 0;
+  }
+
+  /**
+   * Check if a string represents a valid url
+   * @return boolean
+   */
+  function isUrl(string) {
+     var regexp = /^(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?/;
+     return regexp.test(string);
+  }
+
+  function formatTimeStamp(value) {
+    if (value > 1400000000 && value < 2000000000) {
+      var d = new Date(value * 1000);
+      var result = document.createElement("span");
+      result.setAttribute("class", "json-date");
+      result.innerText = "  " + d.toISOString();
+
+      return result;
+    }
+  }
+
+  function filterKey(key) {
+    if (key == "__type__") {
+      return true;
+    }
+    return false;
+  }
+
+  // We use direct DOM manipulation because it is much faster than jquery and
+  // this might encode a very large json object.
+  function json2html(json, depth) {
+    var result = document.createElement('span');
+    var child;
+
+    result.setAttribute("class", "control collapsed");
+    if (typeof json === 'string') {
+      if (isUrl(json)) {
+        child = document.createElement("a");
+        child.setAttribute("class", "json-string");
+        child.setAttribute("href", "json");
+        child.innerText = json;
+      } else {
+        child = document.createElement("span");
+        child.setAttribute("class", "json-string");
+        child.innerText = json;
+      }
+      result.appendChild(child);
+
+    } else if (typeof json === 'number') {
+      child = document.createElement('span');
+      child.setAttribute("class", "json-string");
+      child.innerText = json;
+      result.appendChild(child);
+
+      var timestamp = formatTimeStamp(json);
+      if (timestamp) {
+        result.appendChild(timestamp);
+      }
+    } else if (typeof json === 'boolean') {
+      child = document.createElement('span');
+      child.setAttribute("class", "json-literal");
+      child.innerText = json;
+
+      result.appendChild(child);
+
+    } else if (json === null) {
+      child = document.createElement('span');
+      child.setAttribute("class", "json-null");
+      child.innerText = "null";
+
+      result.appendChild(child);
+
+    } else if (json instanceof Array) {
+      result.appendChild(document.createTextNode("["));
+
+      if (json.length > 0) {
+        var ol = document.createElement("ol");
+        ol.setAttribute("class", "json-array");
+        for (var i = 0; i < json.length; ++i) {
+          var li = document.createElement("li");
+
+          /* Add toggle button if item is collapsable */
+          if (isCollapsable(json[i])) {
+            var a = document.createElement("a")
+            a.setAttribute("class", "json-toggle collapsed");
+            li.appendChild(a);
+          }
+          li.appendChild(json2html(json[i], depth+1));
+          /* Add comma if item is not last */
+          if (i < json.length - 1) {
+            li.appendChild(document.createTextNode(','));
+          }
+          ol.appendChild(li);
+        }
+        result.appendChild(ol);
+
+        var placeholder = json.length + (json.length > 1 ? ' items' : ' item');
+        var a = document.createElement("a");
+        a.setAttribute("class", "json-placeholder");
+        a.innerText = placeholder;
+        result.appendChild(a);
+      }
+      result.appendChild(document.createTextNode("]"));
+
+    } else if (typeof json === 'object') {
+      result.appendChild(document.createTextNode("{"));
+      var keys = [];
+      for (var key in json) {
+        if (json.hasOwnProperty(key) && !filterKey(key)) {
+          keys.push(key);
+        }
+      }
+      if (keys.length > 0) {
+        var ul = document.createElement("ul");
+        ul.setAttribute("class", "json-dict");
+
+        for (var i=0; i < keys.length; i++) {
+          var key = keys[i];
+          var li = document.createElement("li");
+          /* Add toggle button if item is collapsable */
+          if (isCollapsable(json[key])) {
+            var a = document.createElement("a");
+            a.setAttribute("class", "json-toggle collapsed");
+            a.innerText = key;
+            li.appendChild(a);
+          }
+          else {
+            li.innerText = key;
+          }
+          li.appendChild(document.createTextNode(": "));
+          li.appendChild(json2html(json[key], depth+1));
+          ul.appendChild(li);
+        }
+        result.appendChild(ul);
+
+        var placeholder = keys.length + (keys.length > 1 ? ' items' : ' item');
+        var a = document.createElement("a");
+        a.setAttribute("class", "json-placeholder");
+        a.innerText = placeholder;
+        result.appendChild(a);
+      }
+      result.appendChild(document.createTextNode("}"));
+    }
+    return result;
+  };
+
+  /**
+   * jQuery plugin method
+   * @param json: a javascript object
+   */
+  $.fn.RekallJsonViewer = function(json) {
+
+    /* jQuery chaining */
+    return this.each(function() {
+      /* Transform to HTML */
+      var html = json2html(json, 0);
+      /* Insert HTML in target DOM element */
+      $(this).append(html);
+      if (isCollapsable(json)) {
+        $(this).prepend('<a href="#" class="json-toggle root">');
+      }
+
+      /* Bind click on toggle buttons */
+      $(this).off('click');
+      var toggler = function(element) {
+        $(element).toggleClass("collapsed");
+        $(element).siblings("span.control").toggleClass("exposed");
+        $(element).siblings("span.control").toggleClass("collapsed");
+      };
+
+      $(this).on('click', 'a.json-toggle', function() {
+        toggler(this);
+        return false;
+      });
+
+      /* Simulate click on toggle button when placeholder is clicked */
+      $(this).on('click', 'a.json-placeholder', function() {
+        $(this).parent().siblings('a.json-toggle').click();
+        return false;
+      });
+
+      toggler($(this).find("a.root"));
+    });
+  };
+})(jQuery);

@@ -340,3 +340,13 @@
   positional: false
   short_opt: ''
   type: Boolean
+- name: also_upload_files
+  default: false
+  help: When specified, Rekall Agent also uploads files.
+  positional: false
+  type: Boolean
+- name: flow_precondition
+  default:
+  help: An EFilter query to run before the flow
+  positional: false
+  type: String

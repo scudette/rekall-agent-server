@@ -1,6 +1,8 @@
 {{extend response.layout_path}}
 
+<div id="pagination"></div>
+<div id="description"></div>
 <div id="plugins" class="hexviewer"></div>
 <script>
-  rekall.uploads.hex_view("{{=upload_id}}", "#plugins");
+  rekall.uploads.hex_view("{{=upload_id}}", {{=offset}}, "#plugins");
 </script>

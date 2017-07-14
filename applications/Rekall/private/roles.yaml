@@ -25,6 +25,11 @@
     - artifacts.viewer
     - hunts.approve
 
+    # Also include Viewer Role.
+    - application.login
+    - clients.search
+    - hunts.view
+
 - role: Examiner
   description: >-
     This is grantable at the client level. It allows a user to view existing
@@ -46,6 +51,7 @@
     - clients.view
     - flows.view
     - hunts.propose
+    - application.login
 
 - role: Administrator
   description: >-

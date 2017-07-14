@@ -144,9 +144,13 @@ class APIDispatcher(object):
                 current.response.headers['Content-Type'] = (
                     'application/json; charset=utf-8')
                 try:
-                    return current.response.json(
-                        dispatch.run(current, current.request.args[i+1:],
-                                     current.request.vars))
+                    value = dispatch.run(
+                        current, current.request.args[i+1:],
+                        current.request.vars)
+
+                    if isinstance(value, dict):
+                        return current.response.json(value)
+                    return
                 except users.PermissionDenied as e:
                     current.response.status = 403
                     return dict(error="Permission Denied",
@@ -157,6 +161,7 @@ Please contact your administrator to be granted the required permission.""" % (
 
                 except (ValueError, TypeError) as e:
                     current.response.status = 400
+                    logging.exception("Error with request")
                     return dict(error=unicode(e), type="Invalid Arguments")
 
                 except Exception as e:
@@ -272,6 +277,11 @@ api_dispatcher.register("/control/upload_receive", control.upload_receive,
 api_dispatcher.register("/control/file_upload", control.file_upload,
                         [users.require_client_authentication()])
 
+api_dispatcher.register("/control/file_upload_receive",
+                        control.file_upload_receive,
+                        [users.anonymous_access()])
+
+
 # Query the server about plugins.
 api_dispatcher.register("/plugin/list", plugins.list,
                         [require_csrf_token(),
@@ -346,6 +356,10 @@ api_dispatcher.register("/hunts/results", hunts.results,
 api_dispatcher.register("/uploads/list", uploads.list,
                         [require_csrf_token(),
                          users.require_application("clients.view")])
+
+api_dispatcher.register("/uploads/download", uploads.download,
+                        [require_csrf_token(),
+                         uploads.require_uploads_access])
 
 
 # User Account management.
