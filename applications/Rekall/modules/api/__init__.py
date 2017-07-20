@@ -35,7 +35,7 @@ class MethodDesc(object):
     def convert_to_arrays(self, kwargs):
         """Web2py does not properly convert jquery's array notation."""
         for k in list(kwargs):
-            if k.endswith("[]"):
+            if k and k.endswith("[]"):
                 v = kwargs.pop(k)
                 if isinstance(v, basestring):
                     v = [v]
@@ -150,6 +150,7 @@ class APIDispatcher(object):
 
                     if isinstance(value, dict):
                         return current.response.json(value)
+
                     return
                 except users.PermissionDenied as e:
                     current.response.status = 403
@@ -301,6 +302,10 @@ api_dispatcher.register("/collections/get", collections.get,
 
 # Deal with flows. Must have at least Examiner access to the client.
 api_dispatcher.register("/flows/list", flows.list,
+                        [require_csrf_token(),
+                         users.require_client("clients.view")])
+
+api_dispatcher.register("/flows/describe", flows.describe,
                         [require_csrf_token(),
                          users.require_client("clients.view")])
 

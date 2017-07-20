@@ -23,10 +23,9 @@ def InitializeMenu():
     response.title = request.application.replace('_', ' ').title()
     response.subtitle = ''
 
-    response.meta.author = myconf.get('app.author')
-    response.meta.description = myconf.get('app.description')
-    response.meta.keywords = myconf.get('app.keywords')
-    response.meta.generator = myconf.get('app.generator')
+    response.meta.author = "The Rekall Team"
+    response.meta.description = "The Rekall Agent Server"
+    response.meta.keywords = "Rekall, Forensics"
 
     if users.check_permission(current, "clients.search", "/"):
         response.menu.append(

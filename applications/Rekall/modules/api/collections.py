@@ -33,7 +33,7 @@ metadata.args = collections.OrderedDict(
     client_id="The client owning the collection (used for ACL checks).")
 
 
-def get(current, collection_id, client_id, part=0):
+def get(current, collection_id, part=0):
     """Stream the requested collection.
 
     Note that we do not edit the collection in any way we just stream the same
@@ -50,7 +50,7 @@ def get(current, collection_id, client_id, part=0):
         row = db((db.collections.collection_id == collection_id) &
                  (db.collections.part == part)).select().first()
 
-        if row and row.client_id == client_id:
+        if row:
             response.headers[blobstore.BLOB_KEY_HEADER] = row.blob_key
             response.headers["Content-Type"] = "application/json"
         else:

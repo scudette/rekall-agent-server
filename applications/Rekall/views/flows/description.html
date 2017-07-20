@@ -1,0 +1,34 @@
+{{extend response.layout_path}}
+
+<h1>Flow {{=flow_id}} </h1>
+
+<ul class="nav nav-tabs" role="tablist">
+ <li role="presentation" id="desc-tab">
+    <a href="#desc" role="tab">Description</a></li>
+ <li role="presentation" id="collections-tab" >
+   <a href="#collections" role="tab">
+     Collections</a></li>
+ <li role="presentation" id="files-tab" >
+    <a href="#files" role="tab">Files</a></li>
+</ul>
+<div class='tab-content'>
+   <div class='tab-pane' role='tabpanel' id="desc">
+     <div class='panel panel-default'>
+       <div class='panel-body'></div>
+     </div>
+   </div>
+   <div class='tab-pane' role='tabpanel' id="collections">
+     <div class='panel panel-default'>
+       <div class='panel-body'></div>
+     </div>
+   </div>
+   <div class='tab-pane' role='tabpanel' id="files">
+     <div class='panel panel-default'>
+       <div class='panel-body'><table></table></div>
+     </div>
+   </div>
+</div>
+
+<script>
+  rekall.flows.describe_flow("{{=client_id}}", "{{=flow_id}}");
+</script>

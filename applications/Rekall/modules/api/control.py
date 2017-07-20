@@ -1,4 +1,5 @@
 """This part of the API is communicated directly with the client."""
+import cgi
 import datetime
 import time
 
@@ -107,7 +108,6 @@ def ticket(current, flow_id):
     return dict()
 
 
-
 # Interact with FileUploadLocationImpl
 
 def file_upload(current):
@@ -129,18 +129,19 @@ def file_upload_receive(current, upload_request, client_id):
         upload_request)
     db = current.db
     file_info = blobstore.parse_file_info(current.request.vars['file'])
-    gs_object_name = file_info.gs_object_name
-    blob_key = blobstore.create_gs_key(gs_object_name)
+    if file_info:
+        gs_object_name = file_info.gs_object_name
+        blob_key = blobstore.create_gs_key(gs_object_name)
 
-    upload_id = db.uploads.insert(
-        blob_key=blob_key,
-        state="received")
+        upload_id = db.uploads.insert(
+            blob_key=blob_key,
+            state="received")
 
-    db.upload_files.insert(
-        file_information=upload_request.file_information.to_primitive(),
-        upload_id=upload_id,
-        flow_id=upload_request.flow_id,
-        client_id=client_id)
+        db.upload_files.insert(
+            file_information=upload_request.file_information,
+            upload_id=upload_id,
+            flow_id=upload_request.flow_id,
+            client_id=client_id)
 
     return dict()
 

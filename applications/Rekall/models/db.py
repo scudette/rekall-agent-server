@@ -5,6 +5,7 @@
 # File is released under public domain and you can use without limitations
 # -------------------------------------------------------------------------
 import datetime
+import os
 import uuid
 
 from gluon.globals import current
@@ -12,28 +13,24 @@ from gluon.globals import current
 from api import dal
 from rekall_lib.types import agent
 from rekall_lib.types import artifacts
-
-# -------------------------------------------------------------------------
-# if SSL/HTTPS is properly configured and you want all HTTP requests to
-# be redirected to HTTPS, uncomment the line below:
-# -------------------------------------------------------------------------
-# request.requires_https()
+from rekall_lib.types import location
 
 # -------------------------------------------------------------------------
 # app configuration made easy. Look inside private/appconfig.ini
 # -------------------------------------------------------------------------
 from gluon.contrib.appconfig import AppConfig
 
-# -------------------------------------------------------------------------
-# once in production, remove reload=True to gain full speed
-# -------------------------------------------------------------------------
-myconf = AppConfig(reload=True)
-
 # In future we might support other environments but for now we must run on
 # AppEngine due to user auth restrictions.
 if not request.env.web2py_runtime_gae:
     raise RuntimeError(
         "Rekall is designed to run only on the AppEngine framework.")
+
+# We need SSL when deployed.
+RUNNING_IN_DEV = os.environ['SERVER_SOFTWARE'].startswith('Development')
+if not RUNNING_IN_DEV:
+    request.requires_https()
+
 
 db = DAL('google:datastore+ndb')
 
@@ -51,13 +48,6 @@ if not session.csrf_token:
 # none otherwise. a pattern can be 'controller/function.extension'
 # -------------------------------------------------------------------------
 response.generic_patterns = ['*'] if request.is_local else []
-
-
-# -------------------------------------------------------------------------
-# choose a style for forms
-# -------------------------------------------------------------------------
-response.formstyle = myconf.get('forms.formstyle')  # or 'bootstrap3_stacked' or 'bootstrap2' or other
-response.form_label_separator = myconf.get('forms.separator') or ''
 
 # -------------------------------------------------------------------------
 # (optional) optimize handling of static files
@@ -216,7 +206,8 @@ db.define_table("uploads",
                 Field("fileinfo_id", type='integer'))
 
 db.define_table("upload_files",
-                Field("file_information", type='json',
+                Field("file_information",
+                      type=dal.SerializerType(location.FileInformation),
                       comment="FileInformation object for the uploaded file."),
                 Field("upload_id", type="integer",
                       comment="ID of upload in the uploads table"),

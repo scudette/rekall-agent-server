@@ -12,6 +12,30 @@ from api import users
 from api import utils
 
 
+def describe(current, flow_id, client_id):
+    """Describe information about the flow."""
+    db = current.db
+    row = db(db.flows.flow_id == flow_id).select().first()
+    if row and row.client_id == client_id:
+        collection_ids = [
+            x.collection_id for x in
+            db(db.collections.flow_id == flow_id).select()]
+
+        file_infos = []
+        for x in db(db.upload_files.flow_id == flow_id).select():
+            file_infos.append(dict(
+                upload_id=x.upload_id,
+                file_information=x.file_information.to_primitive()))
+
+        return dict(
+            flow=row.flow.to_primitive(),
+            creator=row.creator,
+            timestamp=row.timestamp,
+            status=row.status.to_primitive(),
+            collection_ids=collection_ids,
+            file_infos=file_infos)
+
+
 def list(current, client_id):
     """Inspect all the launched flows."""
     flows = []
@@ -19,23 +43,11 @@ def list(current, client_id):
     if client_id:
         for row in db(db.flows.client_id == client_id).select(
             orderby=~db.flows.timestamp):
-            # TODO: This might be a bit slow. Think about reworking the UI to be
-            # more efficient here.
-            collection_ids = [
-                x.collection_id for x in
-                db(db.collections.flow_id == row.flow.flow_id).select()]
-
-            file_ids = [
-                x.upload_id for x in
-                db(db.upload_files.flow_id == row.flow.flow_id).select()]
-
             flows.append(dict(
                 flow=row.flow.to_primitive(),
                 timestamp=row.timestamp,
                 creator=row.creator,
                 status=row.status.to_primitive(),
-                collection_ids=collection_ids,
-                file_ids=file_ids,
             ))
 
     return dict(data=flows)
@@ -100,7 +112,7 @@ def make_canned_flow(current, flow_ids, client_id):
     seen = set()
     for flow_id in flow_ids:
         row = db(db.flows.flow_id == flow_id).select().first()
-        if row:
+        if row and row.client_id == client_id:
             for action in row.flow.actions:
                 if isinstance(action, actions.PluginAction):
                     canned_action = actions.PluginAction.from_keywords(
@@ -162,8 +174,11 @@ def launch_canned_flows(current, client_id, name):
     if not row:
         raise ValueError("There is no canned flow with name '%s'" % name)
 
+    also_upload_files = False
     flow_id = utils.new_flow_id()
     for action in row.flow.actions:
+        if action.rekall_session.get("also_upload_files"):
+            also_upload_files = True
         action.collection = dict(
             __type__="JSONCollection",
             location=dict(
@@ -186,6 +201,13 @@ def launch_canned_flows(current, client_id, name):
             )),
         actions=row.flow.actions,
     )
+
+    if also_upload_files:
+        flow.file_upload = dict(
+            __type__="FileUploadLocation",
+            flow_id=flow_id,
+            base=html.URL(c="api", f='control/file_upload',
+                          host=True))
 
     db.flows.insert(
         flow_id=flow_id,
@@ -227,9 +249,24 @@ def download(current, flow_ids, client_id):
 
             grants[row.client_id] = token
         if token:
+            flow_id = row.flow_id
+            file_infos = []
+            # Get all uploaded files.
+            for x in db(db.upload_files.flow_id == flow_id).select():
+                file_infos.append(dict(
+                    upload_id=x.upload_id,
+                    file_information=x.file_information.to_primitive()))
+
+            # Get all collections.
+            collection_ids = [
+                x.collection_id for x in
+                db(db.collections.flow_id == flow_id).select()]
+
             result.append(dict(name=row.flow_id,
                                flow=row.flow.to_primitive(),
                                client_id=row.client_id,
+                               collection_ids=collection_ids,
+                               file_infos=file_infos,
                                token=token,
                                status=row.status.to_primitive()))
 

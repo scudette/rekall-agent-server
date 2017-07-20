@@ -121,27 +121,6 @@ rekall.utils.update_badge = function() {
   });
 }
 
-rekall.utils.jsonSyntaxHighlight = function (json) {
-  json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  var result = json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-    var cls = 'number';
-    if (/^"/.test(match)) {
-      if (/:$/.test(match)) {
-        cls = 'key';
-      } else {
-        cls = 'string';
-      }
-    } else if (/true|false/.test(match)) {
-      cls = 'boolean';
-    } else if (/null/.test(match)) {
-      cls = 'null';
-    }
-    return '<span class="' + cls + '">' + match + '</span>';
-  });
-
-  return "<pre>" + result + "</pre>";
-}
-
 // Escape text to html safely.
 rekall.utils.safe_html = function(text) {
   return $("<div>").text(text).html();
@@ -211,6 +190,16 @@ rekall.utils.download_to_browser = function(filename, text) {
   element.click();
 
   document.body.removeChild(element);
+}
+
+rekall.utils.parseParams = function (str) {
+  return str.split('&').reduce(function (params, param) {
+    var paramSplit = param.split('=').map(function (value) {
+      return decodeURIComponent(value.replace('+', ' '));
+    });
+    params[paramSplit[0]] = paramSplit[1];
+    return params;
+  }, {});
 }
 
 
@@ -426,25 +415,56 @@ rekall.templates.load_precanned_flow_template = function(client_id) {
 
 rekall.templates.flow_download_script = function(metadatas) {
   var result = "";
-  result += "export API_ENDPOINT='" + rekall.globals.api_route + "'\n";
+  var sanitize = function(str) {
+    str = str + "";
+    var regex = /[^a-zA-Z0-9-_/:&]/g;
+    return str.replace(regex, ".");
+  }
+
+  var strict_sanitize = function(str) {
+    str = str + "";
+    var regex = /[^a-zA-Z0-9-_]/g;
+    return str.replace(regex, ".");
+  }
 
   for (var i=0; i<metadatas.length; i++) {
     var metadata = metadatas[i];
-    result += "export TOKEN='" + metadata.token + "'\n";
-    result += "export FLOW_ID='" + metadata.name + "'\n";
-    result += "export CLIENT_ID='" + metadata.client_id + "'\n";
-    result += `
+    var api_endpoint = sanitize(rekall.globals.api_route);
+    var client_id = sanitize(metadata.client_id);
+    var flow_id = sanitize(metadata.name);
+    var token = sanitize(metadata.token);
 
-echo Fetching flow $FLOW_ID
-mkdir -p $FLOW_ID
-`;
+    result += "\r\n\r\necho Fetching flow " + sanitize(flow_id) + "\r\n" +
+        "mkdir -p '" + flow_id + "'    '" +
+        flow_id + "/collections/'" + "    '" +
+        flow_id + "/uploads/'" + " \r\n\r\n";
+
     if (metadata.collection_ids) {
-      result += "mkdir -p $FLOW_ID/collections/\n";
-      for (var j=0; j<metadata.collection_ids.length; j++) {
-        result += "export COLLECTION_ID='" +
-            metadata.collection_ids[j] + "'\n";
-        result += "wget --output-document=$FLOW_ID/collections/$COLLECTION_ID.json \\\n";
-        result += "  \"$API_ENDPOINT/collections/get?client_id=$CLIENT_ID&collection_id=$COLLECTION_ID&token=$TOKEN\" \n";
+      for (var i=0; i<metadata.collection_ids.length; i++) {
+        var collection_id = metadata.collection_ids[i];
+        result += ("wget --output-document='" + flow_id +
+            "/collections/" + collection_id + ".json' \\\n" +
+            '  "' + api_endpoint + "/collections/get?client_id=" +
+            client_id + "&collection_id=" + collection_id +
+            "&token=" + token + '" \n');
+      }
+    };
+
+    if (metadata.file_infos) {
+      for (var i=0; i<metadata.file_infos.length; i++) {
+        var file_info = metadata.file_infos[i];
+        var upload_id = sanitize(file_info.upload_id);
+        var filename = "";
+
+        if (file_info.file_information && file_info.file_information.filename) {
+          filename = file_info.file_information.filename;
+        }
+
+        result += ("# For " + sanitize(file_info.file_information.filename) +
+            "\r\nwget --output-document='" + flow_id +
+            "/uploads/" + upload_id + strict_sanitize(filename) + "' \\\n" +
+            '  "' + api_endpoint + "/uploads/download?upload_id=" +
+            upload_id + "&token=" + token + '" \n')
       }
     }
   }
@@ -723,11 +743,8 @@ rekall.clients.add_to_client_lru = function (client_id) {
     var client_id = rekall.client_lru[i];
     var inspect_link = $("<a class='link'>")
         .text(client_id)
-        .click(function () {
-          rekall.utils.load(rekall.globals.controllers.inspect_list,
-                            {client_id: client_id});
-          return true; // Propagate event.
-        });
+        .attr("href", rekall.globals.controllers.inspect_list + "?" +
+        $.param({client_id: client_id}));
 
     dom_lru.append($("<li>").append(inspect_link));
   }
@@ -962,7 +979,7 @@ rekall.flows.list_plugins = function(launch_url, client_id, selector) {
         searchable: false,
         render: function (plugin, type, full, meta) {
           var link = $(`<a class='link rekall-glyphicon'>
-  <span class='glyphicon glyphicon glyphicon-pencil'
+  <span class='glyphicon glyphicon-pencil'
         aria-hidden='true'>`).attr("href", launch_url + "?" + $.param({
           plugin: plugin,
           client_id: client_id
@@ -1040,10 +1057,22 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
         }
       },
       {
+        title: 'View',
+        data: "flow",
+        sortable: false,
+        render: function(flow, type, row, meta) {
+          return rekall.utils.make_link(
+              rekall.globals.controllers.describe_flow + "?" + $.param({
+                client_id: client_id,
+                flow_id: flow.flow_id
+              }), 'glyphicon-search');
+        }
+      },
+      {
         title: "Time",
         data: "flow.created_time",
         render: function(timestamp, type, row, meta) {
-          return rekall.cell_renderers.unixtimestamp(timestamp);
+          return rekall.cell_renderers.unixtimestamp(timestamp, type);
         }
       },
       {
@@ -1074,14 +1103,15 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
         }
       },
       {
-        title: "Collections",
-        data: "collection_ids",
-        render: rekall.cell_renderers.collection_ids_renderer,
-      },
-      {
-        title: "Files",
-        data: "file_ids",
-        render: rekall.cell_renderers.upload_ids_renderer,
+        title: "Total Uploads",
+        data: "status",
+        searchable: false,
+        render: function(status, type, row, meta) {
+          if (status && status.total_uploaded_files) {
+            return status.total_uploaded_files;
+          }
+          return "";
+        }
       },
     ],
   });
@@ -1112,6 +1142,66 @@ rekall.flows.list_flows_for_client = function(client_id, selector) {
     $("#modal").modal("show");
     return false;
   });
+};
+
+// View for views.flows.describe
+rekall.flows.describe_flow = function(client_id, flow_id) {
+  $.ajax(rekall.utils.call({
+    api: "/flows/describe",
+    data: {
+      client_id: client_id,
+      flow_id: flow_id
+    },
+    error: rekall.utils.error,
+    success: function(description) {
+      $("#desc .panel-body").html(
+          rekall.cell_renderers.generic_json_renderer(description.flow));
+
+      $("#collections .panel-body").html(
+          rekall.cell_renderers.collection_ids_renderer(
+              description.collection_ids));
+
+      // If no files are available, disable the tab.
+      if (description.file_infos.length == 0) {
+        $("#files-tab").addClass("disabled");
+        $("#files-tab").find("a").removeAttr("role").removeAttr("href");
+
+      } else {
+        $("#files .panel-body").find("table").DataTable({
+          data: description.file_infos,
+          columns: [
+            {
+              title: "View",
+              data: "upload_id",
+              sortable: false,
+              searchable: false,
+              render: function(upload_id, type, row, meta) {
+                return rekall.utils.make_link(
+                    rekall.globals.controllers.hex_view + "?" + $.param({
+                      upload_id: upload_id,
+                    }), "glyphicon-file");
+              }
+            },
+            {
+              title: "Filename",
+              data: "file_information.filename",
+            },
+            {
+              title: "Size",
+              data:"file_information.st_size",
+            }
+          ]});
+      };
+
+      $(".nav-tabs").on("click", "a[role=tab]", function() {
+        $(this).tab('show');
+        return false;
+      });
+
+
+      $("#desc-tab").find("a").tab('show');
+    }
+  }));
 }
 
 rekall.flows.save_flows = function(selector, client_id) {
@@ -1331,7 +1421,7 @@ rekall.hunts.view = function(selector) {
         title: "Created",
         data: "timestamp",
         render: function(timestamp, type, row, meta) {
-          return rekall.cell_renderers.unixtimestamp(timestamp)
+          return rekall.cell_renderers.unixtimestamp(timestamp, type)
         }
       },
       {
@@ -1476,7 +1566,7 @@ rekall.uploads.list_uploads_for_flow = function(flow_id, selector) {
 
 rekall.uploads.build_pagination = function(offset, length, page_size) {
   var number_of_pages = 10;
-  var max_pages = Math.max(number_of_pages, parseInt(length / page_size));
+  var max_pages = Math.min(number_of_pages, parseInt(length / page_size));
   var current_page = parseInt(offset / page_size);
 
   var result = $('<ul class="pagination-sm pagination">');
@@ -1505,7 +1595,7 @@ rekall.uploads.build_pagination = function(offset, length, page_size) {
   var first_page = Math.max(0, current_page - number_of_pages / 2);
   var last_page = Math.min(first_page + number_of_pages, max_pages);
 
-  for (var i=first_page; i<last_page; i++) {
+  for (var i=first_page; i<=last_page; i++) {
     var link = $("<a href='#' class='page-link'>").attr('data-page', i).text(i);
     var button = $('<li class="page-item">').append(link);
     if (current_page == i) button.addClass("active");
@@ -1637,7 +1727,11 @@ rekall.cell_renderers.generic_json_pp_clicks = function(
 }
 
 
-rekall.cell_renderers.unixtimestamp = function(timestamp) {
+rekall.cell_renderers.unixtimestamp = function(timestamp, type) {
+  // Sort by timestamp not the string representation.
+  if (type == "sort") {
+    return timestamp;
+  }
   return new Date(timestamp * 1000).toUTCString();
 }
 
@@ -1727,32 +1821,12 @@ rekall.cell_renderers.collection_ids_renderer = function(
     result += rekall.utils.make_link(
         rekall.globals.controllers.collection_view + "?" + $.param({
           collection_id: collection_ids[i],
-          client_id: row.status.client_id
         }),
         "glyphicon-book");
   }
 
   return result;
 }
-
-rekall.cell_renderers.upload_ids_renderer = function(
-    upload_ids, type, row, meta) {
-  var result = "";
-  if (!upload_ids) {
-    return result;
-  }
-
-  for (var i=0; i<upload_ids.length; i++) {
-    result += rekall.utils.make_link(
-        rekall.globals.controllers.hex_view + "?" + $.param({
-          upload_id: upload_ids[i],
-        }),
-        "glyphicon-file");
-  }
-
-  return result;
-}
-
 
 // Render the message in the table. Note that the message can not be an
 // arbitrary format. It is a reference into a named template which is used to
@@ -1999,7 +2073,7 @@ rekall.collections.build_table_from_collection = function (
 
                           if (cell_type == "epoch") {
                             return rekall.cell_renderers.unixtimestamp(
-                                cell_data);
+                                cell_data, type);
                           }
 
                           return $("<div>").text(cell_data).html();
@@ -2333,3 +2407,17 @@ window.onpopstate = function(event) {
     });
   };
 })(jQuery);
+
+// Setup code- parse the URL into the page state.
+$(function () {
+  // Push the current URL into the window history to allow back button to work.
+  var url = window.location.href;
+  if( !window.history.state || window.history.state.url != url) {
+    window.history.pushState({url: url}, "", url);
+  }
+
+  var params = rekall.utils.parseParams(window.location.search.substring(1));
+  if (params.client_id) {
+    rekall.clients.add_to_client_lru(params.client_id);
+  }
+});

@@ -11,6 +11,12 @@ import api
 
 from api import plugins
 
+def description():
+    client_id = request.vars.client_id
+    flow_id = request.vars.flow_id
+    if client_id and flow_id:
+        return dict(client_id=client_id,
+                    flow_id=flow_id)
 
 def list():
     client_id = request.vars.client_id
@@ -304,7 +310,7 @@ def collection_view():
     creates the viewing page.
     """
     part = request.vars.part or 0
-    if request.vars.collection_id and request.vars.client_id:
+    if request.vars.collection_id:
         return dict(collection_id=request.vars.collection_id,
                     client_id=request.vars.client_id,
                     part=part)

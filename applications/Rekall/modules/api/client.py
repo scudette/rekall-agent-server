@@ -63,6 +63,7 @@ def request_approval(current, client_id, approver, role):
             client_id=client_id,
             user=users.get_current_username(current),
             role=role))
+    return {}
 
 request_approval.args = collections.OrderedDict(
     client_id="The client to grant access to.",
@@ -77,7 +78,8 @@ def approve_request(current, client_id, user, role):
         role in ["Examiner", "Investigator"]):
         users.add(current, user, "/" + client_id, role)
 
-        return "ok"
+    return dict()
+
 
 approve_request.args = collections.OrderedDict(
     client_id="The client to grant access to.",

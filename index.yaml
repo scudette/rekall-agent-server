@@ -10,21 +10,6 @@ indexes:
 # automatically uploaded to the admin console when you next deploy
 # your application using appcfg.py.
 
-- kind: clients
-  properties:
-  - name: __key__
-    direction: desc
-
-- kind: collections
-  properties:
-  - name: __key__
-    direction: desc
-
-- kind: flows
-  properties:
-  - name: __key__
-    direction: desc
-
 - kind: flows
   properties:
   - name: client_id
@@ -41,13 +26,3 @@ indexes:
   - name: labels
   - name: state
   - name: timestamp
-
-- kind: hunts
-  properties:
-  - name: labels
-  - name: timestamp
-
-- kind: permissions
-  properties:
-  - name: __key__
-    direction: desc

@@ -173,6 +173,19 @@
       help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes:
   - mode_live_api
+- plugin: APISessionGenerator
+  name: session_api
+  description: |2+
+
+  args:
+    output_file:
+      type: String
+      help: If specified we write the API into this file in YAML.
+    verbosity:
+      type: IntParser
+      default: 1
+      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
+  active_modes: []
 - plugin: APISetProcessContext
   name: cc
   description: |
@@ -192,320 +205,6 @@
       help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes:
   - mode_live_api
-- plugin: AgentControllerExplainFlows
-  name: explain_flow
-  description: |
-    Explain all the parameters a flow may take.
-  args:
-    flow:
-      type: Choices
-      choices:
-      - CollectFlow
-      - ListProcessesFlow
-      - FileFinderFlow
-      - YaraScan
-      - ListDirectory
-      - Artifact
-      - Hunt
-      help: The flow to explain
-      positional: true
-      required: true
-    verbosity:
-      type: IntParser
-      default: 0
-      help: If non zero show all fields.
-    recursive:
-      type: Bool
-      help: Show recursively nested fields.
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-  active_modes:
-  - mode_agent
-  - mode_controller
-- plugin: AgentControllerExportCollections
-  name: export
-  description: |
-    Exports all collections from the hunt or flow.
-  args:
-    flow_id:
-      type: String
-      help: The flow or hunt ID we should export.
-      positional: true
-      required: true
-    dumpdir:
-      type: String
-      help: The output directory we use export to.
-      positional: true
-      required: true
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-  - mode_controller
-- plugin: AgentControllerFetch
-  name: fetch
-  description: |2+
-
-  args:
-    path:
-      type: String
-      help: The path to fetch.
-      positional: true
-      required: true
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-  - mode_controller
-- plugin: AgentControllerRunFlow
-  name: launch_flow
-  description: |2+
-
-  args:
-    flow:
-      type: Choices
-      choices:
-      - CollectFlow
-      - ListProcessesFlow
-      - FileFinderFlow
-      - YaraScan
-      - ListDirectory
-      - Artifact
-      - Hunt
-      help: The flow to launch
-      positional: true
-      required: true
-    args:
-      type: Any
-      default: {}
-      help: >-
-        Arguments to the flow (use explain_flow to see valid args).This may also be
-        a JSON encoded string
-      positional: true
-    queue:
-      type: String
-      help: Which queue to schedule the hunt on.
-    condition:
-      type: String
-      help: An EFilter query to evaluate if the flow should be run.
-    canned_condition:
-      type: Choices
-      choices:
-        OS_LINUX: any from agent_info() where key=='system' and value=='Linux'
-        OS_OSX: any from agent_info() where key=='system' and value=='Darwin'
-        OS_WINDOWS: any from agent_info() where key=='system' and value=='Windows'
-      help: Canned conditions for the hunt.
-    live:
-      type: Choices
-      default: API
-      choices:
-      - API
-      - Memory
-      help: Live mode to use
-    quota:
-      type: IntParser
-      default: 3600
-      help: Total number of CPU seconds allowed for this flow.
-    verbosity:
-      type: IntParser
-      default: 0
-      help: If non zero show all fields.
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-  active_modes:
-  - mode_agent
-  - mode_controller
-- plugin: AgentControllerRunHunt
-  name: launch_hunt
-  description: |-
-    Launch a hunt on many clients at once.
-
-    Rekall does not treat hunts as different or special entities - a hunt is
-    just a flow which targets multiple systems. However, for users it is
-    sometimes helpful to think in terms of a "hunt". This plugin makes it easier
-    to launch the hunt.
-  args:
-    queue:
-      type: String
-      default: All
-      help: Which queue to schedule the hunt on.
-    flow:
-      type: Choices
-      choices:
-      - CollectFlow
-      - ListProcessesFlow
-      - FileFinderFlow
-      - YaraScan
-      - ListDirectory
-      - Artifact
-      - Hunt
-      help: The flow to launch
-      positional: true
-      required: true
-    args:
-      type: Any
-      default: {}
-      help: >-
-        Arguments to the flow (use explain_flow to see valid args).This may also be
-        a JSON encoded string
-      positional: true
-    condition:
-      type: String
-      help: An EFilter query to evaluate if the flow should be run.
-    canned_condition:
-      type: Choices
-      choices:
-        OS_LINUX: any from agent_info() where key=='system' and value=='Linux'
-        OS_OSX: any from agent_info() where key=='system' and value=='Darwin'
-        OS_WINDOWS: any from agent_info() where key=='system' and value=='Windows'
-      help: Canned conditions for the hunt.
-    live:
-      type: Choices
-      default: API
-      choices:
-      - API
-      - Memory
-      help: Live mode to use
-    quota:
-      type: IntParser
-      default: 3600
-      help: Total number of CPU seconds allowed for this flow.
-    verbosity:
-      type: IntParser
-      default: 0
-      help: If non zero show all fields.
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-  active_modes:
-  - mode_agent
-  - mode_controller
-- plugin: AgentControllerShowFile
-  name: view
-  description: |
-    Display information about a file.
-  args:
-    path:
-      type: String
-      help: A path to the object to display.
-      positional: true
-      required: true
-    query:
-      type: String
-      help: If this is a collection, issue this query
-    limit:
-      type: String
-      help: Limit result to this many rows.
-    mode:
-      type: Choices
-      choices:
-      - text
-      - hex
-      help: Mode for dumping files
-    encoding:
-      type: String
-      default: ascii
-      help: Possible encodings we try for text mode detection.
-    offset:
-      type: IntParser
-      default: 0
-      help: An offset to hexdump.
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-  - mode_controller
-- plugin: AgentControllerShowFlows
-  name: show_flows
-  description: |2+
-
-  args:
-    limit:
-      type: IntParser
-      default: 20
-      help: Total results to display
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-  - mode_controller
-- plugin: AgentControllerShowHunts
-  name: show_hunts
-  description: |2+
-
-  args:
-    queue:
-      type: String
-      default: All
-      help: The hunt queue.
-    limit:
-      type: IntParser
-      default: 20
-      help: Total results to display
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-  - mode_controller
-- plugin: AgentControllerStoreLs
-  name: bucket_ls
-  description: |
-    Show files within the storage bucket.
-  args:
-    path:
-      type: String
-      help: A path to the object to display.
-      positional: true
-    limit:
-      type: IntParser
-      default: 100
-      help: Total results to display
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-  - mode_controller
 - plugin: AgentInfo
   name: agent_info
   description: |-
@@ -514,99 +213,6 @@
     The output format is essentially key value pairs. This is useful for efilter
     queries.
   args:
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-- plugin: AgentServerInitializeGCS
-  name: agent_server_initialize_gcs
-  description: |
-    Initialize the agent server to work in Google Cloud Storage.
-  args:
-    bucket:
-      type: String
-      help: The bucket name for the GCS deployment.
-      required: true
-    service_account_path:
-      type: String
-      help: Path to the service account (JSON) credentials
-      required: true
-    config_dir:
-      type: String
-      help: The directory to write configuration files into.
-      positional: true
-      required: true
-    client_writeback_path:
-      type: String
-      default: /etc/rekall/agent.local.json
-      help: Path to the local client writeback location
-    labels:
-      type: Array
-      default:
-      - All
-      help: The list of labels.
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes: []
-- plugin: AgentServerInitializeLocalHTTP
-  name: agent_server_initialize_http
-  description: |
-    Initialize the agent server to work in Google Cloud Storage.
-  args:
-    base_url:
-      type: String
-      help: The publicly accessible URL of the frontend.
-    bind_port:
-      type: IntParser
-      default: 8000
-      help: Port to bind to
-    bind_address:
-      type: String
-      default: 127.0.0.1
-      help: Address to bind to
-    config_dir:
-      type: String
-      help: The directory to write configuration files into.
-      positional: true
-      required: true
-    client_writeback_path:
-      type: String
-      default: /etc/rekall/agent.local.json
-      help: Path to the local client writeback location
-    labels:
-      type: Array
-      default:
-      - All
-      help: The list of labels.
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes: []
-- plugin: AgentWorker
-  name: worker
-  description: |2+
-
-  args:
-    batches:
-      type: ChoiceArray
-      default:
-      - Startup
-      - FlowStatus
-      - HuntStatus
-      choices:
-      - Startup
-      - FlowStatus
-      - HuntStatus
-      help: One or more batch jobs to run.
-    loop:
-      type: IntParser
-      default: 0
-      help: If specified we loop forever and sleep that many seconds between loops.
     verbosity:
       type: IntParser
       default: 1
@@ -1610,26 +1216,6 @@
       help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes:
   - mode_windows_memory
-- plugin: ControllerAddressResolver
-  name: address_resolver
-  description: |2+
-
-  args:
-    symbol:
-      type: ArrayString
-      default: []
-      help: List of symbols to lookup
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-  - mode_controller
 - plugin: ConvertProfile
   name: convert_profile
   description: |-
@@ -3762,6 +3348,265 @@
       help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes:
   - mode_windows_memory
+- plugin: HeapChunkDumper
+  name: heapdump
+  description: |
+    Dumps allocated/freed chunks from selected processes
+  args:
+    dump_dir:
+      type: String
+      help: Path suitable for dumping files.
+    main_arena:
+      type: IntParser
+      help: >-
+        The main_arena pointer either extracted from the statically linked ELF binary
+        or from the libc library.
+    malloc_par:
+      type: IntParser
+      help: >-
+        The malloc_par pointer either extracted from the linked ELF binary or from
+        the libc library.
+    pids:
+      type: ArrayIntParser
+      help: One or more pids of processes to select.
+      positional: true
+    proc_regex:
+      type: RegEx
+      help: A regex to select a process by name.
+    task:
+      type: ArrayIntParser
+      help: Kernel addresses of task structs.
+    method:
+      type: ChoiceArray
+      default:
+      - InitTask
+      choices:
+      - InitTask
+      help: Method to list processes (Default uses all methods).
+    dtb:
+      type: IntParser
+      help: The DTB physical address.
+      hidden: true
+    verbosity:
+      type: IntParser
+      default: 1
+      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
+  active_modes:
+  - mode_linux_memory
+- plugin: HeapObjects
+  name: heapobjects
+  description: |-
+    Prints the structs of heap objects (such as allocated chunks, arenas,
+    ...)
+  args:
+    print_allocated:
+      type: Boolean
+      default: false
+      help: prints all allocated chunk structs
+    print_freed:
+      type: Boolean
+      default: false
+      help: prints all freed chunk structs
+    print_mmapped:
+      type: Boolean
+      default: false
+      help: prints all MMAPPED chunk structs
+    print_mallinfo:
+      type: Boolean
+      default: false
+      help: prints statistic information, similar to glibc's mallinfo
+    main_arena:
+      type: IntParser
+      help: >-
+        The main_arena pointer either extracted from the statically linked ELF binary
+        or from the libc library.
+    malloc_par:
+      type: IntParser
+      help: >-
+        The malloc_par pointer either extracted from the linked ELF binary or from
+        the libc library.
+    pids:
+      type: ArrayIntParser
+      help: One or more pids of processes to select.
+      positional: true
+    proc_regex:
+      type: RegEx
+      help: A regex to select a process by name.
+    task:
+      type: ArrayIntParser
+      help: Kernel addresses of task structs.
+    method:
+      type: ChoiceArray
+      default:
+      - InitTask
+      choices:
+      - InitTask
+      help: Method to list processes (Default uses all methods).
+    dtb:
+      type: IntParser
+      help: The DTB physical address.
+      hidden: true
+    verbosity:
+      type: IntParser
+      default: 1
+      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
+  active_modes:
+  - mode_linux_memory
+- plugin: HeapOverview
+  name: heapinfo
+  description: |
+    Tries to gather a list of all arenas/heaps and all allocated chunks.
+  args:
+    main_arena:
+      type: IntParser
+      help: >-
+        The main_arena pointer either extracted from the statically linked ELF binary
+        or from the libc library.
+    malloc_par:
+      type: IntParser
+      help: >-
+        The malloc_par pointer either extracted from the linked ELF binary or from
+        the libc library.
+    pids:
+      type: ArrayIntParser
+      help: One or more pids of processes to select.
+      positional: true
+    proc_regex:
+      type: RegEx
+      help: A regex to select a process by name.
+    task:
+      type: ArrayIntParser
+      help: Kernel addresses of task structs.
+    method:
+      type: ChoiceArray
+      default:
+      - InitTask
+      choices:
+      - InitTask
+      help: Method to list processes (Default uses all methods).
+    dtb:
+      type: IntParser
+      help: The DTB physical address.
+      hidden: true
+    verbosity:
+      type: IntParser
+      default: 1
+      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
+  active_modes:
+  - mode_linux_memory
+- plugin: HeapPointerSearch
+  name: heapsearch
+  description: |
+    Searches all chunks for the given string, regex or pointer(s).
+  args:
+    pointers:
+      type: ArrayIntParser
+      help: >-
+        Prints chunks that contain exactly the given pointer(s). The pointer(s) can
+        be given as (hexa)decimal numbers.
+    chunk_addresses:
+      type: ArrayIntParser
+      help: >-
+        Expects address(es) belonging to a chunk(s) of interest, and prints all chunks
+        having a pointer somewhere into the data part of that chunk(s).
+    regex:
+      type: str
+      help: Searches all chunks with the given regex and prints all hits.
+    string:
+      type: str
+      help: Searches all chunks for the given string and prints all hits.
+    search_struct:
+      type: Boolean
+      default: false
+      help: >-
+        Includes the malloc_struct fields in the search process such as size and fd/bk
+        for bin chunks (but not its own prev_size field). This is normally not desired
+        and hence deactivated by default.
+    main_arena:
+      type: IntParser
+      help: >-
+        The main_arena pointer either extracted from the statically linked ELF binary
+        or from the libc library.
+    malloc_par:
+      type: IntParser
+      help: >-
+        The malloc_par pointer either extracted from the linked ELF binary or from
+        the libc library.
+    pids:
+      type: ArrayIntParser
+      help: One or more pids of processes to select.
+      positional: true
+    proc_regex:
+      type: RegEx
+      help: A regex to select a process by name.
+    task:
+      type: ArrayIntParser
+      help: Kernel addresses of task structs.
+    method:
+      type: ChoiceArray
+      default:
+      - InitTask
+      choices:
+      - InitTask
+      help: Method to list processes (Default uses all methods).
+    dtb:
+      type: IntParser
+      help: The DTB physical address.
+      hidden: true
+    verbosity:
+      type: IntParser
+      default: 1
+      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
+  active_modes:
+  - mode_linux_memory
+- plugin: HeapReferenceSearch
+  name: heaprefs
+  description: |-
+    Examines the data part of the given chunk for references to other
+    chunks.
+  args:
+    chunk_addresses:
+      type: ArrayIntParser
+      help: >-
+        The address(es) belonging to chunks of interest. Those chunks are then examined
+        for references to other chunks.
+    main_arena:
+      type: IntParser
+      help: >-
+        The main_arena pointer either extracted from the statically linked ELF binary
+        or from the libc library.
+    malloc_par:
+      type: IntParser
+      help: >-
+        The malloc_par pointer either extracted from the linked ELF binary or from
+        the libc library.
+    pids:
+      type: ArrayIntParser
+      help: One or more pids of processes to select.
+      positional: true
+    proc_regex:
+      type: RegEx
+      help: A regex to select a process by name.
+    task:
+      type: ArrayIntParser
+      help: Kernel addresses of task structs.
+    method:
+      type: ChoiceArray
+      default:
+      - InitTask
+      choices:
+      - InitTask
+      help: Method to list processes (Default uses all methods).
+    dtb:
+      type: IntParser
+      help: The DTB physical address.
+      hidden: true
+    verbosity:
+      type: IntParser
+      default: 1
+      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
+  active_modes:
+  - mode_linux_memory
 - plugin: HiveDump
   name: hivedump
   description: |
@@ -4104,6 +3949,34 @@
       help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes:
   - mode_live
+- plugin: IRVadDump
+  name: vaddump
+  description: |
+    Dump the VMA memory for a process.
+  args:
+    dump_dir:
+      type: String
+      help: Path suitable for dumping files.
+    regex:
+      type: RegEx
+      help: A regular expression to filter VAD filenames.
+    offset:
+      type: SymbolAddress
+      help: Only print the vad corresponding to this offset.
+    verbosity:
+      type: IntParser
+      default: 1
+      help: With high verbosity print more information on each region.
+    pids:
+      type: ArrayIntParser
+      default: []
+      help: One or more pids of processes to select.
+      positional: true
+    proc_regex:
+      type: RegEx
+      help: A regex to select a process by name.
+  active_modes:
+  - mode_live_api
 - plugin: IStat
   name: istat
   description: |
@@ -4245,27 +4118,6 @@
       help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes:
   - mode_windows_memory
-- plugin: InspectFlow
-  name: inspect_flow
-  description: |2+
-
-  args:
-    flow_id:
-      type: String
-      help: The flow to examine
-      positional: true
-      required: true
-    verbosity:
-      type: IntParser
-      default: 0
-      help: If non zero show all fields.
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-  active_modes:
-  - mode_agent
-  - mode_controller
 - plugin: InspectHeap
   name: inspect_heap
   description: |-
@@ -4320,34 +4172,6 @@
   active_modes:
   - mode_amd64
   - mode_windows_memory
-- plugin: InspectHunt
-  name: inspect_hunt
-  description: |2+
-
-  args:
-    limit:
-      type: IntParser
-      default: 20
-      help: Limit of rows to display
-    graph_clients:
-      type: Bool
-      help: Also plot a graph of client participation.
-    flow_id:
-      type: String
-      help: The flow to examine
-      positional: true
-      required: true
-    verbosity:
-      type: IntParser
-      default: 0
-      help: If non zero show all fields.
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-  active_modes:
-  - mode_agent
-  - mode_controller
 - plugin: InteractiveShell
   name: shell
   description: |
@@ -4429,6 +4253,50 @@
       help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes:
   - mode_windows_memory
+- plugin: Keepassx
+  name: keepassx
+  description: |-
+    Gathers password entries for keepassx.
+    The retrieved content of those entries comprises the username, title, URL
+    and Comment.
+  args:
+    main_arena:
+      type: IntParser
+      help: >-
+        The main_arena pointer either extracted from the statically linked ELF binary
+        or from the libc library.
+    malloc_par:
+      type: IntParser
+      help: >-
+        The malloc_par pointer either extracted from the linked ELF binary or from
+        the libc library.
+    pids:
+      type: ArrayIntParser
+      help: One or more pids of processes to select.
+      positional: true
+    proc_regex:
+      type: RegEx
+      help: A regex to select a process by name.
+    task:
+      type: ArrayIntParser
+      help: Kernel addresses of task structs.
+    method:
+      type: ChoiceArray
+      default:
+      - InitTask
+      choices:
+      - InitTask
+      help: Method to list processes (Default uses all methods).
+    dtb:
+      type: IntParser
+      help: The DTB physical address.
+      hidden: true
+    verbosity:
+      type: IntParser
+      default: 1
+      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
+  active_modes:
+  - mode_linux_memory
 - plugin: LdrModules
   name: ldrmodules
   description: |
@@ -6426,46 +6294,6 @@
       help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes:
   - mode_agent
-- plugin: RekallAgentController
-  name: agent_controller
-  description: |
-    Main entry point for running the agent controller.
-  args:
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-- plugin: RekallAgentControllerClientContext
-  name: cc
-  description: |-
-    A plugin which changes the client context.
-
-    Having a client context set avoids the need to specify it each time.
-  args:
-    client_id:
-      type: String
-      help: Client id to switch to.
-      positional: true
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-  - mode_controller
-- plugin: RekallAgentHTTPServer
-  name: http_server
-  description: |
-    A plugin to create a front end server.
-  args:
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
 - plugin: RekallBovineExperience3000
   name: moo
   description: |-
@@ -6488,6 +6316,23 @@
     Note: This plugin is only defined and available when using the main entry
     point. It is not available when Rekall is used as a library since it allows
     arbitrary code execution.
+  active_modes: []
+- plugin: RunFlow
+  name: run_flow
+  description: |
+    Run the flows specified.
+  args:
+    flow:
+      type: String
+      help: A string encoding a Flow JSON object.
+      positional: true
+    flow_filename:
+      type: String
+      help: A filename containing an encoded Flow JSON object.
+    verbosity:
+      type: IntParser
+      default: 1
+      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes: []
 - plugin: Search
   name: search
@@ -6537,29 +6382,6 @@
       default: 1
       help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes: []
-- plugin: SearchClients
-  name: show_clients
-  description: |2+
-
-  args:
-    client_id:
-      type: String
-      help: Exact match on client id
-      positional: true
-    hostname:
-      type: String
-      help: Partial match on hostname
-    limit:
-      type: IntParser
-      default: 20
-      help: Number of rows to show.
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-  - mode_controller
 - plugin: Services
   name: services
   description: |
@@ -7314,33 +7136,6 @@
       help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes:
   - mode_windows_memory
-- plugin: VFSLs
-  name: vfs_ls
-  description: |2+
-
-  args:
-    path:
-      type: String
-      default: /
-      help: The path to list.
-      positional: true
-    refresh:
-      type: Bool
-      help: If set we issue a new flow request to the client and wait until it completes.
-    recursive:
-      type: Bool
-      help: Recurse into subdirs.
-    client_id:
-      type: String
-      help: The client_id. If not specified we use the context as set by the cc()
-        plugin.
-    verbosity:
-      type: IntParser
-      default: 1
-      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
-  active_modes:
-  - mode_agent
-  - mode_controller
 - plugin: VersionScan
   name: version_scan
   description: |
@@ -8305,3 +8100,45 @@
       help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
   active_modes:
   - mode_windows_memory
+- plugin: Zsh
+  name: zsh
+  description: |
+    Extracts the zsh command history, similar to the existing bash plugin.
+  args:
+    main_arena:
+      type: IntParser
+      help: >-
+        The main_arena pointer either extracted from the statically linked ELF binary
+        or from the libc library.
+    malloc_par:
+      type: IntParser
+      help: >-
+        The malloc_par pointer either extracted from the linked ELF binary or from
+        the libc library.
+    pids:
+      type: ArrayIntParser
+      help: One or more pids of processes to select.
+      positional: true
+    proc_regex:
+      type: RegEx
+      help: A regex to select a process by name.
+    task:
+      type: ArrayIntParser
+      help: Kernel addresses of task structs.
+    method:
+      type: ChoiceArray
+      default:
+      - InitTask
+      choices:
+      - InitTask
+      help: Method to list processes (Default uses all methods).
+    dtb:
+      type: IntParser
+      help: The DTB physical address.
+      hidden: true
+    verbosity:
+      type: IntParser
+      default: 1
+      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
+  active_modes:
+  - mode_linux_memory
