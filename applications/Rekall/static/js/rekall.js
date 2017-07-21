@@ -1586,59 +1586,7 @@ rekall.hunts.describe_client = function(client_id, hunt_id) {
   }));
 }
 
-rekall.uploads = {}
-rekall.uploads.list_uploads_for_flow = function(flow_id, selector) {
-  var file_info_cache = {};
-
-  $(selector).DataTable({
-    ajax: rekall.utils.call({
-      api: "/uploads/list",
-      data: {
-        flow_id: flow_id
-      }
-    }),
-    columns: [
-      {
-        title: "filename",
-        data: "file_information",
-        render: function(file_info, type, row, meta) {
-          var text = file_info.filename;
-          return rekall.cell_renderers.generic_json_pp(
-              file_info_cache, text, "finfo",
-              file_info, type, row, meta);
-        }
-      },
-      {
-        title: "Download",
-        data: "upload_id",
-        render: function(upload_id, type, row, meta) {
-          var filename = row.file_information.filename;
-          if (!filename) {
-            filename = "download_" + upload_id;
-          }
-          return rekall.utils.make_link(
-              rekall.globals.controllers.download + "?" + $.param({
-                upload_id: upload_id,
-                filename: filename}),
-              'launch-icon.png');
-        }
-      },
-      {
-        title: "HexView",
-        data: "upload_id",
-        render: function(upload_id, type, row, meta) {
-          return rekall.utils.make_link(
-              rekall.globals.controllers.hex_view + "?" + $.param({
-                upload_id: upload_id}), 'launch-icon.png');
-        }
-      },
-    ]
-  });
-
-  rekall.cell_renderers.generic_json_pp_clicks(
-      file_info_cache, "finfo", "File Information", selector);
-}
-
+rekall.uploads = {};
 rekall.uploads.build_pagination = function(offset, length, page_size) {
   var number_of_pages = 10;
   var max_pages = Math.min(number_of_pages, parseInt(length / page_size));
@@ -1681,7 +1629,7 @@ rekall.uploads.build_pagination = function(offset, length, page_size) {
   result.append(last);
 
   return result;
-}
+};
 
 
 rekall.uploads.hex_view = function(upload_id, offset, selector) {
@@ -1698,7 +1646,7 @@ rekall.uploads.hex_view = function(upload_id, offset, selector) {
     responseType: 'arraybuffer',
     dataType: "binary",
     headers: {
-      "Range": ("bytes=" + parseInt(offset) + "-" + (offset + page_size)),
+      "Range": ("bytes=" + parseInt(offset) + "-" + (offset + page_size))
     },
     success: function(result, textStatus, request){
       var content_range = request.getResponseHeader('Content-Range');
