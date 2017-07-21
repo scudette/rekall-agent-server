@@ -1,0 +1,9 @@
+{{extend response.layout_path}}
+
+<div class="table-container panel-body">
+  <table id="hunt_clients" class="display" cellspacing="0" width="100%"></table>
+</div>
+
+<script>
+  rekall.hunts.list_clients("#hunt_clients", "{{=hunt_id}}");
+</script>

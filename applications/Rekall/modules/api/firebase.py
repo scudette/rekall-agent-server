@@ -7,6 +7,8 @@ import uuid
 
 import json
 import hashlib
+import logging
+
 import httplib2
 
 
@@ -15,6 +17,7 @@ _FIREBASE_SCOPES = [
     'https://www.googleapis.com/auth/firebase.database',
 ]
 
+# TODO: This should be set in the config file.
 database_url = "https://fourth-carport-147912.firebaseio.com"
 
 
@@ -49,8 +52,13 @@ def notify_client(client_id):
     """
     url = "%s/clients/%s.json" % (database_url, hashlib.sha1(
         client_id).hexdigest())
-    response, content = _get_http().request(
-        url, method='PUT', body=json.dumps(dict(uuid=str(uuid.uuid4()))))
+    try:
+        response, content = _get_http().request(
+            url, method='PUT', body=json.dumps(dict(uuid=str(uuid.uuid4()))))
 
-    if response.status != 200:
-        raise IOError("Error: %s, %s" % (response, content))
+        if response.status != 200:
+            raise  IOError(response.content)
+
+    except Exception as e:
+        # Firebase is best effort only.
+        logging.warning("Unable to contact firebase: %s", e)

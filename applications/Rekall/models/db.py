@@ -212,8 +212,7 @@ db.define_table("upload_files",
                 Field("upload_id", type="integer",
                       comment="ID of upload in the uploads table"),
                 Field("flow_id", comment="Flow which owns this upload."),
-                Field("client_id"),
-                )
+                Field("client_id"))
 
 
 db.define_table("artifacts",

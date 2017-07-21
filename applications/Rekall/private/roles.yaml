@@ -39,6 +39,7 @@
   permissions:
     - flows.view
     - clients.view
+    - hunts.view
 
 - role: Investigator
   description: >-

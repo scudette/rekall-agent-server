@@ -31,11 +31,6 @@ def inspect_list():
     return dict(client_id=client_id)
 
 
-def uploads_view():
-    flow_id = request.vars.flow_id
-    return dict(flow_id=flow_id)
-
-
 def hex_view():
     upload_id = request.vars.upload_id
     offset = request.vars.offset or 0
