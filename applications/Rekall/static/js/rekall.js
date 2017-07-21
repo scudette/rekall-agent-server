@@ -461,11 +461,11 @@ rekall.templates.flow_download_script = function(metadatas) {
         }
 
         result += (
-	  "# For " + sanitize(file_info.file_information.filename) +
-	    "\r\nwget --output-document='" + flow_id +
-	    "/uploads/" + upload_id + strict_sanitize(filename) + "' \\\n" +
-	    '  "' + api_endpoint + "/uploads/download?upload_id=" +
-	    upload_id + "&token=" + token + '" \n');
+          "# For " + sanitize(file_info.file_information.filename) +
+            "\r\nwget --output-document='" + flow_id +
+            "/uploads/" + upload_id + strict_sanitize(filename) + "' \\\n" +
+            '  "' + api_endpoint + "/uploads/download?upload_id=" +
+            upload_id + "&token=" + token + '" \n');
       }
     }
   }
@@ -1408,16 +1408,16 @@ rekall.hunts.view = function(selector) {
         }
       },
       {
-	title: "View",
-	data: "flow",
-	searchable: false,
-	sortable: false,
-	render: function(flow, type, row, meta) {
-	  return rekall.utils.make_link(
-	    rekall.globals.controllers.hunts_list_clients+"?"+ $.param({
-	      hunt_id: flow.flow_id
-	    }), 'glyphicon-search');
-	}
+        title: "View",
+        data: "flow",
+        searchable: false,
+        sortable: false,
+        render: function(flow, type, row, meta) {
+          return rekall.utils.make_link(
+            rekall.globals.controllers.hunts_list_clients+"?"+ $.param({
+              hunt_id: flow.flow_id
+            }), 'glyphicon-search');
+        }
       },
       {
         title: "",
@@ -1490,34 +1490,34 @@ rekall.hunts.list_clients = function(selector, hunt_id) {
     ajax: rekall.utils.call({
       api: "/hunts/list_clients",
       data: {
-	hunt_id: hunt_id
+        hunt_id: hunt_id
       },
       error: rekall.utils.error,
     }),
     columns: [
       {
-	title: "View",
-	data: "client_id",
-	render: function(client_id, type, row, meta) {
-	  return rekall.utils.make_link(
-	    rekall.globals.controllers.hunts_describe_client + "?" + $.param({
+        title: "View",
+        data: "client_id",
+        render: function(client_id, type, row, meta) {
+          return rekall.utils.make_link(
+            rekall.globals.controllers.hunts_describe_client + "?" + $.param({
               client_id: client_id,
               hunt_id: hunt_id
             }), 'glyphicon-search');
-	}
+        }
       },
       {
-	title: "Client",
-	data: "client_id"
+        title: "Client",
+        data: "client_id"
       },
       {
-	title: "Status",
-	data: "status",
-	render: function(status, type, row, meta) {
-	  var text = status.status;
-	  return rekall.cell_renderers.generic_json_pp(
-	    status_cache, text, "status", status, type, row, meta);
-	}
+        title: "Status",
+        data: "status",
+        render: function(status, type, row, meta) {
+          var text = status.status;
+          return rekall.cell_renderers.generic_json_pp(
+            status_cache, text, "status", status, type, row, meta);
+        }
       },
     ]
   });
