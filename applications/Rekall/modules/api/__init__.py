@@ -287,6 +287,7 @@ api_dispatcher.register("/control/file_upload_receive",
 api_dispatcher.register("/plugin/list", plugins.list,
                         [require_csrf_token(),
                          users.require_application("application.login")])
+
 api_dispatcher.register("/plugin/get", plugins.get,
                         [require_csrf_token(),
                          users.require_application("application.login")])
@@ -347,15 +348,19 @@ api_dispatcher.register("/hunts/approve", hunts.grant_approval,
                         [require_csrf_token(),
                          users.require_application("hunts.approve")])
 
+# Anyone can list existing hunts.
 api_dispatcher.register("/hunts/list", hunts.list,
                         [require_csrf_token(),
                          users.require_application("hunts.view")])
 
-api_dispatcher.register("/hunts/results", hunts.results,
+# Must get approval to view hunts.
+api_dispatcher.register("/hunts/list_clients", hunts.list_clients,
+                        [require_csrf_token(),
+                         hunts.requires_hunt_access])
+
+api_dispatcher.register("/hunts/describe_client", hunts.describe_client,
                         [require_csrf_token(),
                          users.require_application("hunts.view")])
-
-
 
 # File uploads.
 api_dispatcher.register("/uploads/list", uploads.list,

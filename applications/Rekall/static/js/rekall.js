@@ -10,7 +10,7 @@ rekall.utils.load = function(url, data) {
   $.ajax({
     url: url,
     headers: {
-      "x-rekall-bare-layout": 1,
+      "x-rekall-bare-layout": 1
     },
     success: function(data) {
       $("#main").html(data);
@@ -39,7 +39,7 @@ rekall.utils.submit_form = function(obj) {
     url: url,
     method: method,
     headers: {
-      "x-rekall-bare-layout": 1,
+      "x-rekall-bare-layout": 1
     },
     data: data,
     success: function(html) {
@@ -117,7 +117,7 @@ rekall.utils.update_badge = function() {
       if (count == 0) count = "";
       $("#notifications").text(count);
     },
-    error: function() {}, // Ignore errors.
+    error: function() {} // Ignore errors.
   });
 }
 
@@ -144,8 +144,7 @@ rekall.utils.error = function(jqXHR) {
   $("#modalContainer").html(
       rekall.templates.modal_template(
           description,
-          "Error: " + jqXHR.statusText,
-          ));
+          "Error: " + jqXHR.statusText));
   $("#modal").modal("show");
 }
 
@@ -205,7 +204,8 @@ rekall.utils.parseParams = function (str) {
 
 // Templates. We use jquery native templates because these are faster and safer
 // than other javascript based templates.
-rekall.templates = {}
+rekall.templates = {};
+
 rekall.templates.modal_template = function(body, title, footer) {
   var result = $(`
   <div class="modal fade" id="modal" tabindex="-1" role="dialog"
@@ -293,7 +293,7 @@ rekall.templates.mint_token = function(roles) {
       api: '/users/tokens/mint',
       data: {
         role: role,
-        resource: resource,
+        resource: resource
       },
       success: function(mint) {
         $("#token").val("token=" + mint.token).show();
@@ -339,7 +339,7 @@ rekall.templates.save_flows = function(canned_flow) {
       rekall.cell_renderers.generic_json_renderer(canned_flow));
 
   return form;
-}
+};
 
 rekall.templates.error_message_container = function() {
   return $(`
@@ -351,7 +351,7 @@ rekall.templates.error_message_container = function() {
   <div id="error_message"></div>
 </div>
 `);
-}
+};
 
 rekall.templates.load_precanned_flow_template = function(client_id) {
   var table = $(`
@@ -363,7 +363,7 @@ rekall.templates.load_precanned_flow_template = function(client_id) {
   table.find("#canned").DataTable({
     ajax: rekall.utils.call({
       api: "/flows/list_canned",
-      error: rekall.utils.error,
+      error: rekall.utils.error
     }),
     columns: [
       {
@@ -390,7 +390,7 @@ rekall.templates.load_precanned_flow_template = function(client_id) {
       },
       {
         title: "Description",
-        data: "description",
+        data: "description"
       },
     ]
   });
@@ -400,7 +400,7 @@ rekall.templates.load_precanned_flow_template = function(client_id) {
       api: "/flows/launch_canned",
       data: {
         client_id: client_id,
-        name: $(this).data("name"),
+        name: $(this).data("name")
       },
       error: rekall.utils.error_container,
       success: function() {
@@ -411,7 +411,7 @@ rekall.templates.load_precanned_flow_template = function(client_id) {
   });
 
   return table;
-}
+};
 
 rekall.templates.flow_download_script = function(metadatas) {
   var result = "";
@@ -419,13 +419,13 @@ rekall.templates.flow_download_script = function(metadatas) {
     str = str + "";
     var regex = /[^a-zA-Z0-9-_/:&]/g;
     return str.replace(regex, ".");
-  }
+  };
 
   var strict_sanitize = function(str) {
     str = str + "";
     var regex = /[^a-zA-Z0-9-_]/g;
     return str.replace(regex, ".");
-  }
+  };
 
   for (var i=0; i<metadatas.length; i++) {
     var metadata = metadatas[i];
@@ -460,22 +460,23 @@ rekall.templates.flow_download_script = function(metadatas) {
           filename = file_info.file_information.filename;
         }
 
-        result += ("# For " + sanitize(file_info.file_information.filename) +
-            "\r\nwget --output-document='" + flow_id +
-            "/uploads/" + upload_id + strict_sanitize(filename) + "' \\\n" +
-            '  "' + api_endpoint + "/uploads/download?upload_id=" +
-            upload_id + "&token=" + token + '" \n')
+        result += (
+	  "# For " + sanitize(file_info.file_information.filename) +
+	    "\r\nwget --output-document='" + flow_id +
+	    "/uploads/" + upload_id + strict_sanitize(filename) + "' \\\n" +
+	    '  "' + api_endpoint + "/uploads/download?upload_id=" +
+	    upload_id + "&token=" + token + '" \n');
       }
     }
   }
 
   return result;
-}
+};
 
 
 rekall.templates.render_client_info = function(client_info) {
   return rekall.cell_renderers.generic_json_renderer(client_info);
-}
+};
 
 rekall.templates.label_clients = function(client_ids, labels) {
   var form = $("<form><input type='text' name='labels'>")
@@ -492,7 +493,7 @@ rekall.templates.label_clients = function(client_ids, labels) {
       rekall.utils.checkbox_tristate);
 
   return form;
-}
+};
 
 rekall.templates.create_hunt_from_flows = function(labels, flow_ids) {
   var result=$(`
@@ -592,14 +593,14 @@ rekall.templates.create_hunt_from_flows = function(labels, flow_ids) {
       });
 
   return rekall.templates.modal_template(result, "Run Flow as Hunt", button);
-}
+};
 
 
-rekall.api = {}
+rekall.api = {};
 rekall.api.list = function(selector) {
   $(selector).DataTable({
     ajax: rekall.utils.call({
-      api: '/list',
+      api: '/list'
     }),
     columns: [
       {
@@ -615,11 +616,11 @@ rekall.api.list = function(selector) {
       },
       {
         title: "Method",
-        data: "method",
+        data: "method"
       },
       {
         title: "Description",
-        data: "doc",
+        data: "doc"
       },
       {
         title: "Args",
@@ -647,7 +648,7 @@ rekall.api.mint_token = function() {
   $.ajax(rekall.utils.call({
     api: '/users/roles/list',
     success: function(roles) {
-      $("#modalContainer").html(rekall.templates.mint_token(roles));
+      $("#modalContainer").html(rekall.templates.mint_token(roles.roles));
       $("#modal").modal("show");
     }
   }));
@@ -1407,6 +1408,18 @@ rekall.hunts.view = function(selector) {
         }
       },
       {
+	title: "View",
+	data: "flow",
+	searchable: false,
+	sortable: false,
+	render: function(flow, type, row, meta) {
+	  return rekall.utils.make_link(
+	    rekall.globals.controllers.hunts_list_clients+"?"+ $.param({
+	      hunt_id: flow.flow_id
+	    }), 'glyphicon-search');
+	}
+      },
+      {
         title: "",
         data: "flow",
         render: function(flow, type, row, meta) {
@@ -1468,48 +1481,110 @@ rekall.hunts.view = function(selector) {
   rekall.cell_renderers.generic_json_pp_clicks(
       status_cache, "status", "Flow Status", selector,
       rekall.cell_renderers.status_detailed_renderer);
-}
+};
 
-
-rekall.hunts.results = function(selector, hunt_id) {
+rekall.hunts.list_clients = function(selector, hunt_id) {
   var status_cache = {};
 
   $(selector).DataTable({
     ajax: rekall.utils.call({
-      api: "/hunts/results",
+      api: "/hunts/list_clients",
       data: {
-        hunt_id: hunt_id
+	hunt_id: hunt_id
       },
+      error: rekall.utils.error,
     }),
     columns: [
       {
-        title: "Client",
-        data: "client_id",
+	title: "View",
+	data: "client_id",
+	render: function(client_id, type, row, meta) {
+	  return rekall.utils.make_link(
+	    rekall.globals.controllers.hunts_describe_client + "?" + $.param({
+              client_id: client_id,
+              hunt_id: hunt_id
+            }), 'glyphicon-search');
+	}
       },
       {
-        title: "Status",
-        data: "status",
-        render: function(status, type, row, meta) {
-          var text = status.status;
-          return rekall.cell_renderers.generic_json_pp(
-              status_cache, text, "status",
-              status, type, row, meta);
-        },
+	title: "Client",
+	data: "client_id"
       },
       {
-        title: "Collections",
-        data: "collection_ids",
-        render: rekall.cell_renderers.collection_ids_renderer,
+	title: "Status",
+	data: "status",
+	render: function(status, type, row, meta) {
+	  var text = status.status;
+	  return rekall.cell_renderers.generic_json_pp(
+	    status_cache, text, "status", status, type, row, meta);
+	}
       },
     ]
   });
 
   rekall.cell_renderers.generic_json_pp_clicks(
-      status_cache, "status", "Flow Status", selector,
-      rekall.cell_renderers.status_detailed_renderer);
+    status_cache, "status", "Hunt Status", selector,
+    rekall.cell_renderers.status_detailed_renderer);
+};
+
+rekall.hunts.describe_client = function(client_id, hunt_id) {
+  $.ajax(rekall.utils.call({
+    api: "/hunts/describe_client",
+    data: {
+      client_id: client_id,
+      hunt_id: hunt_id
+    },
+    error: rekall.utils.error,
+    success: function(description) {
+      $("#desc .panel-body").html(
+          rekall.cell_renderers.generic_json_renderer(description.flow));
+
+      $("#collections .panel-body").html(
+          rekall.cell_renderers.collection_ids_renderer(
+              description.collection_ids));
+
+      // If no files are available, disable the tab.
+      if (description.file_infos.length == 0) {
+        $("#files-tab").addClass("disabled");
+        $("#files-tab").find("a").removeAttr("role").removeAttr("href");
+
+      } else {
+        $("#files .panel-body").find("table").DataTable({
+          data: description.file_infos,
+          columns: [
+            {
+              title: "View",
+              data: "upload_id",
+              sortable: false,
+              searchable: false,
+              render: function(upload_id, type, row, meta) {
+                return rekall.utils.make_link(
+                    rekall.globals.controllers.hex_view + "?" + $.param({
+                      upload_id: upload_id,
+                    }), "glyphicon-file");
+              }
+            },
+            {
+              title: "Filename",
+              data: "file_information.filename",
+            },
+            {
+              title: "Size",
+              data:"file_information.st_size",
+            }
+          ]});
+      };
+
+      $(".nav-tabs").on("click", "a[role=tab]", function() {
+        $(this).tab('show');
+        return false;
+      });
+
+
+      $("#desc-tab").find("a").tab('show');
+    }
+  }));
 }
-
-
 
 rekall.uploads = {}
 rekall.uploads.list_uploads_for_flow = function(flow_id, selector) {
@@ -1926,7 +2001,7 @@ rekall.users.list_users = function (selector) {
         return rekall.utils.call({
           api: "/users/roles/get",
           data: {role: role}
-        })
+        });
       });
 }
 
@@ -1943,7 +2018,7 @@ rekall.users.remove_users = function(selector) {
         data: {
           user: self.attr("data-user"),
           resource: self.attr("data-resource"),
-          role: self.attr("data-role"),
+          role: self.attr("data-role")
         },
         success: function() {
           counter--;

@@ -35,6 +35,8 @@ def describe(current, flow_id, client_id):
             collection_ids=collection_ids,
             file_infos=file_infos)
 
+    raise IOError("Flow %s not found" % flow_id)
+
 
 def list(current, client_id):
     """Inspect all the launched flows."""
@@ -42,7 +44,8 @@ def list(current, client_id):
     db = current.db
     if client_id:
         for row in db(db.flows.client_id == client_id).select(
-            orderby=~db.flows.timestamp):
+            orderby=~db.flows.timestamp
+        ):
             flows.append(dict(
                 flow=row.flow.to_primitive(),
                 timestamp=row.timestamp,

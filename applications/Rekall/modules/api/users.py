@@ -95,7 +95,6 @@ def check_permission(current, permission, resource, user=None,
              (db.permissions.role.belongs(
                  permission_to_roles(permission))))
 
-    result = False
     # TODO: Implement conditions.
     for row in db(query).select():
         logging.debug("Permission granted for %s with %s on %s",
@@ -152,6 +151,7 @@ def add(current, user, resource, role, condition="{}"):
         role=role,
         condition=types.IAMCondition.from_json(condition))
 
+    return {}
 
 def delete(current):
     """Remove a user binding."""
@@ -165,6 +165,8 @@ def delete(current):
        (db.permissions.resource == resource) &
        (db.permissions.role == role)).delete()
 
+    return {}
+
 
 def get_role(current, role):
     """Get a role description"""
@@ -172,7 +174,7 @@ def get_role(current, role):
 
 
 def list_roles(current):
-    return roles
+    return dict(roles=[x for x in roles])
 
 
 def my(current):
@@ -248,24 +250,6 @@ def require_application(permission):
             return True
 
         raise PermissionDenied(permission, resource)
-
-    return wrapper
-
-def require_either(*conditions):
-    """Require either of the conditions."""
-    def wrapper(current):
-        import pdb; pdb.set_trace()
-
-        e = None
-        for condition in conditions:
-            try:
-                if condition(current):
-                    return True
-            except PermissionDenied as e:
-                continue
-        if e: raise e
-
-        raise PermissionDenied()
 
     return wrapper
 
@@ -354,7 +338,7 @@ def send_notifications(current, user, message_id, args):
         message_id=message_id,
         args=args)
 
-    return "ok"
+    return {}
 
 
 def read_notifications(current):

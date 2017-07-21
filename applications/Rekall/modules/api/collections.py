@@ -67,16 +67,23 @@ def require_collection_access(current):
     """Determine if the user has access to the collection."""
     collection_id = current.request.vars.collection_id
     db = current.db
-    row = db(db.collections.collection_id == collection_id).select().first()
-    if row:
-        if row.client_id:
-            client_resource = "/" + row.client_id
-            if users.check_permission(current, "clients.view", client_resource):
-                return True
+    if collection_id:
+        row = db(db.collections.collection_id == collection_id).select().first()
+        if row:
+            if row.client_id:
+                client_resource = "/" + row.client_id
+                if users.check_permission(current, "clients.view",
+                                          client_resource):
+                    return True
 
-        if row.flow_id:
-            flow_resource = "/" + row.flow_id
-            if users.check_permission(current, "flows.view", flow_resource):
-                return True
+            if row.flow_id:
+                flow_resource = "/" + row.flow_id
+                if users.check_permission(current, "flows.view",
+                                          flow_resource):
+                    return True
 
-    raise users.PermissionDenied()
+                if users.check_permission(current, "hunts.view",
+                                          flow_resource):
+                    return True
+
+    raise users.PermissionDenied("clients.view", collection_id)
