@@ -6,6 +6,8 @@
 # ----------------------------------------------------------------------------------------------------------------------
 import api
 from api import users
+from api import utils
+import logging
 
 from gluon.globals import current
 from gluon import http
@@ -53,11 +55,15 @@ def InitializeMenu():
             (T('DB'), False, URL(c="appadmin", f="manage")),
         )
 
+    if users.check_permission(current, "audit.read", "/"):
+        response.menu.append(
+            (T('Audit'), True, URL(c="audit", f="search")))
+
     response.menu.append(
         (T('Api'), True, URL(c="default", f="api")))
 
     response.right_menu = [
-        (users.get_current_username(current), False, "#", [
+        (utils.get_current_username(current), False, "#", [
             (T('Logout'), False, URL('default', 'logout'), []),
         ])
     ]

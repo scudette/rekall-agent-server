@@ -15,6 +15,14 @@
 
     - hunts.view
 
+- role: Auditor
+  description: >-
+    Provides the ability to view audit logs.
+  grantable_on: Application
+  permissions:
+    - application.login
+    - audit.read
+
 - role: Approver
   description: >-
     This role allows the user to approve access to clients. Users with this role

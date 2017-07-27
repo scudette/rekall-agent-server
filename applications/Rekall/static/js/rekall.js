@@ -129,7 +129,19 @@ rekall.utils.safe_html = function(text) {
 rekall.utils.checkbox_tristate = function () {
   if (this.readOnly) this.checked=this.readOnly=false;
   else if (!this.checked) this.readOnly=this.indeterminate=true;
-}
+};
+
+rekall.utils.checkbox_getstate = function (checkbox) {
+  if (checkbox.readOnly) {
+    return "unset";
+  }
+
+  if (checkbox.checked) {
+    return "set";
+  }
+
+  return "clear";
+};
 
 rekall.utils.error = function(jqXHR) {
   var description;
@@ -479,17 +491,37 @@ rekall.templates.render_client_info = function(client_info) {
 };
 
 rekall.templates.label_clients = function(client_ids, labels) {
-  var form = $("<form><input type='text' name='labels'>")
-      .append(rekall.templates.error_message_container());
+  var form = $(`
+<form class="form-horizontal">
+<div class="form-group">
+ <label class="col-sm-2 control-label" for="new"
+  title="New label">New Label</label>
+ <div class="col-sm-7">
+   <input class="form-control" name="labels" type="text">
+ </div>
+</div>
+</div>
+`);
+  form.append(rekall.templates.error_message_container());
 
   $(labels).each(function () {
-    var checkbox = $("<input type='checkbox' name='existing'>")
-        .attr("value", this)
-        .prop("indeterminate", true);
-    form.append(checkbox).append($("<div>").text(this));
+    var checkbox = $("<input type='checkbox' class='existing' readonly>")
+          .attr("value", this)
+          .prop("indeterminate", true);
+
+    var row = $(`
+<div class="form-group">
+ <label class="col-sm-2 control-label"></label>
+ <div class="col-sm-7 checkbox">
+ </div>
+</div>
+`);
+    row.find("label").text(this);
+    row.find(".checkbox").append(checkbox);
+    form.append(row);
   });
 
-  $(form).find("input[name=existing]").click(
+  $(form).find("input.existing").click(
       rekall.utils.checkbox_tristate);
 
   return form;
@@ -595,6 +627,48 @@ rekall.templates.create_hunt_from_flows = function(labels, flow_ids) {
   return rekall.templates.modal_template(result, "Run Flow as Hunt", button);
 };
 
+rekall.audit = {};
+rekall.audit.search = function(query, selector) {
+  var dataset = {};
+
+  $(selector).DataTable({
+    ajax: rekall.utils.call({
+      api: "/audit/search",
+      error: rekall.utils.error,
+      data: {
+        query: query
+      }
+    }),
+    order: [[ 0, 'desc' ]],
+    columns: [
+      {
+        title: "Timestamp",
+        data: "timestamp",
+      },
+      {
+        title: "Type",
+        data: "message.__type__",
+      },
+      {
+        title: "User",
+        data: "message.user",
+      },
+      {
+        title: "Message",
+        data: "message",
+        render: function(message, type, row, meta) {
+          var text = row.text;
+          return rekall.cell_renderers.generic_json_pp(
+            dataset, text, "message",
+            message, type, row, meta);
+        }
+      }
+    ]
+  });
+
+  rekall.cell_renderers.generic_json_pp_clicks(
+    dataset, "message", "Audit Message", selector);
+};
 
 rekall.api = {};
 rekall.api.list = function(selector) {
@@ -812,7 +886,7 @@ rekall.clients.search_clients = function (query, selector) {
         render: function(client_id, type, row, meta) {
           var checkbox = $('<input name="client_ids" type="checkbox">');
           checkbox.attr("value", client_id);
-          checkbox.attr("data_labels", row.labels.join(","));
+          checkbox.attr("data_labels", row.custom_labels.join(","));
           return checkbox.prop("outerHTML");
         }
       },
@@ -896,9 +970,9 @@ rekall.clients.label = function(selector) {
     if (this.checked) {
       selected_client_ids.push(this.value);
       var entry_labels = $(this).attr("data_labels").split(",");
-      $(entry_labels).each(function () {
-        labels.add(this);
-      });
+      for (var i=0; i<entry_labels.length; i++) {
+        labels.add(entry_labels[i]);
+      };
     }
   });
 
@@ -908,16 +982,34 @@ rekall.clients.label = function(selector) {
 
   var button = $('<button class="btn btn-default">Label</button>');
   button.click(function () {
-    var labels = [];
+    var set_labels = [];
+    var clear_labels = [];
     $("input[name=labels]").each(function () {
-      labels.push($(this).val());
+      var new_labels = $(this).val().split(",");
+      for (var i=0; i<new_labels.length; i++) {
+        if (new_labels[i]) {
+          set_labels.push(new_labels[i]);
+        }
+      }
+    });
+
+    $("input.existing[type=checkbox]").each(function () {
+      var state = rekall.utils.checkbox_getstate(this);
+
+      if (state == "clear") {
+        clear_labels.push($(this).val());
+      } else if (state == "set") {
+        set_labels.push($(this).val());
+      }
     });
 
     $.ajax(rekall.utils.call({
       api: "/client/label",
+      method: "POST",
       data: {
         client_ids: selected_client_ids,
-        labels: labels,
+        set_labels: set_labels,
+        clear_labels: clear_labels
       },
       error: rekall.utils.error_container,
       success: function() {

@@ -7,6 +7,7 @@ import logging
 
 from gluon import http
 
+from api import audit
 from api import client
 from api import collections
 from api import control
@@ -218,6 +219,9 @@ api_dispatcher.register("/labels/list", flows.list_labels,
                         [require_csrf_token(),
                          users.require_application("application.login")])
 
+api_dispatcher.register("/audit/search", audit.search,
+                        [require_csrf_token(),
+                         users.require_application("audit.read")])
 
 # Manage artifacts.
 api_dispatcher.register("/artifacts/add", forensic_artifacts.add,

@@ -5050,7 +5050,7 @@
       help: The path to the rekall binary. This is used for spawning multiple processes.
     processes:
       type: IntParser
-      default: 12
+      default: 1
       help: Number of concurrent workers.
     path_to_repository:
       type: String
@@ -5512,6 +5512,27 @@
 
     It is used to measure startup overheads.
   active_modes: []
+- plugin: OSQuery
+  name: osquery
+  description: |-
+    Runs the OSQuery query and emit the results.
+
+    Note that the columns emitted depend on osquery itself so we can
+    not predict in advance the table format.
+  args:
+    query:
+      type: String
+      help: The OSQuery query to run.
+      positional: true
+    osquery_path:
+      type: String
+      help: The path to the osquery binary (default osqueryi).
+    verbosity:
+      type: IntParser
+      default: 1
+      help: 'An integer reflecting the amount of desired output: 0 = quiet, 10 = noisy.'
+  active_modes:
+  - mode_live
 - plugin: ObjectTree
   name: object_tree
   description: |-

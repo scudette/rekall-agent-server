@@ -4,6 +4,7 @@ import os
 import urlparse
 import yaml
 
+from api import audit
 from api import types
 from api import utils
 
@@ -12,6 +13,7 @@ from google.appengine.api import users
 
 from rekall_lib import crypto
 from rekall_lib import serializer
+from rekall_lib.types import agent
 
 
 toplevel = os.path.dirname(__file__) + "/../.."
@@ -87,7 +89,7 @@ def check_permission(current, permission, resource, user=None,
             return False
         user = user.email()
 
-        if users.is_current_user_admin():
+        if is_user_app_admin():
             return True
 
     query = ((db.permissions.resource == resource) &
@@ -132,6 +134,7 @@ def check_permission_with_token(current, permission, resource, token):
 
 
 def is_user_app_admin():
+    logging.debug("is_user_app_admin: %s", users.is_current_user_admin())
     return users.is_current_user_admin()
 
 
@@ -151,19 +154,19 @@ def add(current, user, resource, role, condition="{}"):
         role=role,
         condition=types.IAMCondition.from_json(condition))
 
+    audit.log(current, "UserAdd", username=user, resource=resource, role=role)
+
     return {}
 
-def delete(current):
+def delete(current, user, role, resource="/"):
     """Remove a user binding."""
     db = current.db
-    request = current.request
-    user = request.vars.user
-    resource = request.vars.resource or "/"
-    role = request.vars.role
 
     db((db.permissions.user == user) &
        (db.permissions.resource == resource) &
        (db.permissions.role == role)).delete()
+
+    audit.log(current, "UserDelete", username=user, resource=resource, role=role)
 
     return {}
 
@@ -182,22 +185,10 @@ def my(current):
     db = current.db
     result = []
     for row in db(
-        db.permissions.user == get_current_username(current)).select():
+        db.permissions.user == utils.get_current_username(current)).select():
         result.append(row.as_dict())
 
     return dict(data=result)
-
-
-def get_current_username(current):
-    # If access was granted through a token, the username is the delegator.
-    if current.request.token:
-        return current.request.token.delegator
-
-    user = users.get_current_user()
-    if not user:
-        return ""
-    return user.email()
-
 
 
 # The following decorators are used to ensure that the current request complies
@@ -323,7 +314,7 @@ def require_admin():
 
 
 def count_notifications(current):
-    user = get_current_username(current)
+    user = utils.get_current_username(current)
     db = current.db
     return db((db.notifications.user == user) &
               (db.notifications.read == False)).count()
@@ -333,7 +324,7 @@ def send_notifications(current, user, message_id, args):
     """Send a notification to the user."""
     db = current.db
     db.notifications.insert(
-        from_user=get_current_username(current),
+        from_user=utils.get_current_username(current),
         user=user,
         message_id=message_id,
         args=args)
@@ -346,7 +337,7 @@ def read_notifications(current):
     result = []
 
     for row in db(
-        db.notifications.user == get_current_username(current)).select():
+        db.notifications.user == utils.get_current_username(current)).select():
         result.append(row.as_dict())
         if not row.read:
             row.update_record(read=True)
@@ -357,7 +348,7 @@ def read_notifications(current):
 def clear_notifications(current):
     db = current.db
 
-    db((db.notifications.user == get_current_username(current)) &
+    db((db.notifications.user == utils.get_current_username(current)) &
        (db.notifications.read == True)).delete()
 
     return dict()
@@ -370,9 +361,28 @@ def mint_token(current, role, resource):
 
     db = current.db
     token_id = utils.new_token_id()
-    db.tokens.insert(delegator=get_current_username(current),
+    db.tokens.insert(delegator=utils.get_current_username(current),
                      token_id=token_id,
                      role=role,
                      resource=resource)
 
     return dict(token=token_id)
+
+
+class UserAdd(agent.AuditMessage):
+    schema = [
+        dict(name="username"),
+        dict(name="resource"),
+        dict(name="role"),
+        dict(name="format",
+             default="%(user)s added %(username)s as %(role)s on %(resource)s")
+    ]
+
+class UserDelete(agent.AuditMessage):
+    schema = [
+        dict(name="username"),
+        dict(name="resource"),
+        dict(name="role"),
+        dict(name="format",
+             default="%(user)s removed %(username)s as %(role)s on %(resource)s")
+    ]

@@ -1,6 +1,7 @@
 import uuid
 import gluon
 from gluon import html
+from google.appengine.api import users
 
 
 def new_hunt_id():
@@ -57,3 +58,14 @@ def BaseValueList(obj):
         res.append(x.b_val)
 
     return res
+
+
+def get_current_username(current):
+    # If access was granted through a token, the username is the delegator.
+    if current.request.token:
+        return current.request.token.delegator
+
+    user = users.get_current_user()
+    if not user:
+        return ""
+    return user.email()
