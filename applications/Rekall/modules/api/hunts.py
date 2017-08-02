@@ -4,6 +4,7 @@ from gluon import html
 
 from rekall_lib.types import actions
 from rekall_lib.types import agent
+from api import audit
 from api import users
 from api import utils
 
@@ -74,7 +75,7 @@ def propose_from_flows(current, flow_ids, labels, approvers, name=None):
         name=name or hunt_id,
         flow_id=hunt_id,
         created_time=now,
-        creator=users.get_current_username(current),
+        creator=utils.get_current_username(current),
         ticket=dict(
             location=dict(
                 __type__="HTTPLocation",
@@ -135,7 +136,9 @@ def propose_from_flows(current, flow_ids, labels, approvers, name=None):
         users.send_notifications(
             current, approver, "HUNT_APPROVAL_REQUEST", dict(
                 hunt_id=hunt_id,
-                user=users.get_current_username(current)))
+                user=utils.get_current_username(current)))
+
+    audit.log(current, "HuntProposal", hunt_id=hunt_id)
 
     return {}
 
@@ -148,6 +151,8 @@ def grant_approval(current, hunt_id, user):
         # Give the user permission over this hunt.
         users.add(current, user, "/" + hunt_id, "Examiner")
         return dict(data="ok")
+
+    audit.log(current, "HuntApproval", hunt_id=hunt_id)
 
     return {}
 

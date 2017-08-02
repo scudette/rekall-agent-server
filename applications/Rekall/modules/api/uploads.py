@@ -1,5 +1,5 @@
 import json
-
+from api import audit
 from api import users
 
 from google.appengine.ext import blobstore
@@ -30,6 +30,9 @@ def download(current, upload_id, filename=None):
         response.headers["Content-Type"] = "application/octet-stream"
         response.headers["Content-Disposition"] = (
             'attachment; filename="%s"' % html.xmlescape(filename))
+
+        audit.log(current, "FileDownload", upload_id=upload_id)
+
     else:
         raise ValueError("not found")
 

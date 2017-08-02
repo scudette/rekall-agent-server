@@ -140,6 +140,15 @@ db.define_table('client_logs',
                       comment='Additional information about the event'),
                 )
 
+db.define_table('audit',
+                Field('timestamp', type="datetime",
+                      default=datetime.datetime.utcnow),
+                Field('user', comment="The user which caused this message"),
+                Field('type', comment="The type of message"),
+                Field('message', type=dal.SerializerType(agent.AuditMessage),
+                      comment='The audit message.'))
+
+
 db.define_table('flows',
                 Field('flow_id', unique=True, notnull=True,
                       comment="Each flow has a unique ID"),

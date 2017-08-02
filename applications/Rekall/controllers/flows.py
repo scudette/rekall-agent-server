@@ -1,5 +1,6 @@
 # Launch flows.
 import re
+
 from gluon.globals import current
 from gluon import http
 from gluon import validators
@@ -234,11 +235,11 @@ class SessionFormBuilder(FormBuilder):
             input = self.BuildInput("session_" + arg, desc)
             if input is not None:
                 inputs.append(DIV(
-                        LABEL(arg, _class="col-sm-2 control-label",
-                              _for=arg,
-                              _title=desc.get('help', '')),
-                        DIV(input, _class="col-sm-7"),
-                        _class="form-group",
+                    LABEL(arg, _class="col-sm-2 control-label",
+                          _for=arg,
+                          _title=desc.get('help', '')),
+                    DIV(input, _class="col-sm-7"),
+                    _class="form-group",
                 ))
 
         return inputs

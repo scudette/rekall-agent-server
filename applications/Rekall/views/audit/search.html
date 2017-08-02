@@ -1,0 +1,32 @@
+{{extend response.layout_path}}
+
+<h1>Audit Logs</h1>
+
+<form id="query_form">
+<div class="input-group">
+  <input type="text" class="form-control"
+         value="{{=q}}"
+         id="query" />
+  <span class="input-group-addon btn btn-default" id="search">
+    <span class="glyphicon glyphicon-search" aria-hidden="true"
+          id="search" title="Search"></span>&nbsp;
+  </span>
+</div>
+</form>
+
+<div class="table-container panel-body">
+  <table id="audit" class="display" cellspacing="0" width="100%"></table>
+</div>
+
+<script>
+  rekall.audit.search("{{=q}}", "#audit")
+  rekall.utils.watch_checkboxes_to_disabled_button("#clients", "#label");
+  var handler = function () {
+    rekall.utils.load(
+      "{{=URL(c='audit', f='search')}}", {q: $("#query").val()});
+    return false;
+  };
+
+  $("#search").click(handler);
+  $("#query_form").submit(handler);
+</script>

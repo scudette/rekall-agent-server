@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import collections
 
 from google.appengine.ext import blobstore
+from api import audit
 from api import users
 
 
@@ -53,6 +54,9 @@ def get(current, collection_id, part=0):
         if row:
             response.headers[blobstore.BLOB_KEY_HEADER] = row.blob_key
             response.headers["Content-Type"] = "application/json"
+
+            audit.log(current, "CollectionDownload", collection_id=collection_id)
+
         else:
             raise ValueError("collection not found")
 

@@ -7,6 +7,7 @@ from rekall_lib.types import agent
 
 import api
 
+from api import audit
 from api import firebase
 from api import users
 from api import utils
@@ -100,12 +101,15 @@ def launch_plugin_flow(current, client_id, rekall_session, plugin, plugin_arg):
             client_id=client_id,
             flow_id=flow_id,
             status="Pending"),
-        creator=users.get_current_username(current),
+        creator=utils.get_current_username(current),
         flow=flow,
         timestamp=flow.created_time.timestamp,
     )
 
     firebase.notify_client(client_id)
+
+    audit.log(current, "FlowLaunchPlugin", flow_id=flow_id, plugin=plugin,
+              client_id=client_id)
 
 
 def make_canned_flow(current, flow_ids, client_id):
@@ -163,9 +167,9 @@ def list_canned_flows(current):
 
     return dict(data=result)
 
-def delete_canned_flows(current, names):
+def delete_canned_flows(current, names=None):
     db = current.db
-    for name in names:
+    for name in names or []:
         db(db.canned_flows.name == name).delete()
 
     return {}
@@ -220,12 +224,15 @@ def launch_canned_flows(current, client_id, name):
             client_id=client_id,
             flow_id=flow_id,
             status="Pending"),
-        creator=users.get_current_username(current),
+        creator=utils.get_current_username(current),
         flow=flow,
         timestamp=flow.created_time.timestamp,
     )
 
     firebase.notify_client(client_id)
+
+    audit.log(current, "FlowLaunchCanned", flow_id=flow_id, canned_flow=name,
+              client_id=client_id)
 
     return {}
 
