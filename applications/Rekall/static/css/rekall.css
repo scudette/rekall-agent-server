@@ -12,8 +12,10 @@ pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
 
 .collection_cell_rich {
     cursor: pointer;
+    word-break: break-all;
+    word-wrap: break-word;
+    white-space: pre;
 }
-
 
 .link {
     cursor: pointer;

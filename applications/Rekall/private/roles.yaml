@@ -62,6 +62,15 @@
     - hunts.propose
     - application.login
 
+- role: Hunter
+  description: >-
+    This role allows the user to propose new Hunts.
+  grantable_on: Application
+  permissions:
+    - flows.view
+    - hunts.propose
+    - application.login
+
 - role: Administrator
   description: >-
     This role allows the user to manage other user accounts, including changing

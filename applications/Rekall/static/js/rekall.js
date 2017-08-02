@@ -383,12 +383,9 @@ rekall.templates.load_precanned_flow_template = function(client_id) {
         data: "name",
         sortable: false,
         render: function(name, type, row, meta) {
-          var link = $('<a href="#">');
-          link.attr("data-name", name);
-          var img = $("<img class='icon'>")
-              .attr("src", rekall.globals.image_dir + 'launch-icon.png')
-              .appendTo(link);
-
+          var link = $('<a class="link rekall-glyphicon" href="#">')
+                .attr("data-name", name)
+                .append("<span class='glyphicon glyphicon-play' aria-hidden='true'>");
           return link.prop("outerHTML");
         }
       },
@@ -685,7 +682,7 @@ rekall.api.list = function(selector) {
               rekall.globals.controllers.api_call + "?" + $.param({
                 method: method
               }),
-              'launch-icon.png');
+              'glyphicon-thumbs-up');
         }
       },
       {
@@ -729,7 +726,7 @@ rekall.api.mint_token = function() {
 }
 
 rekall.api.call = function(form_selector, button_selector, method) {
-  $(button_selector).click(function () {
+  var call = function () {
     $.ajax(rekall.utils.call({
       api: method,
       data: $(form_selector).serializeArray(),
@@ -746,7 +743,10 @@ rekall.api.call = function(form_selector, button_selector, method) {
     }));
 
     return false;
-  });
+  };
+
+  $(button_selector).click(call);
+  $(form_selector).submit(call);
 }
 
 rekall.artifacts = {}
@@ -2176,9 +2176,9 @@ rekall.collections.build_table_from_collection = function (
                           // We would like to use templates but this is a really
                           // hot function and templates are just too slow.
                           if (cell_type == "any") {
-                            if (type != "display" ||
-                                cell_data.text == cell_data.data) {
-                              return cell_data.text;
+                            var text = cell_data.text;
+                            if (type != "display" || text == cell_data.data) {
+                              return text;
                             };
 
                             return rekall.cell_renderers.generic_json_pp(
