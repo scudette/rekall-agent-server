@@ -1,4 +1,5 @@
 """API implementations for interacting with flows."""
+import re
 import time
 
 from gluon import html
@@ -9,6 +10,7 @@ import api
 
 from api import audit
 from api import firebase
+from api import plugins
 from api import users
 from api import utils
 
@@ -39,7 +41,7 @@ def describe(current, flow_id, client_id):
     raise IOError("Flow %s not found" % flow_id)
 
 
-def list(current, client_id):
+def list_flows(current, client_id):
     """Inspect all the launched flows."""
     flows = []
     db = current.db
@@ -56,11 +58,134 @@ def list(current, client_id):
 
     return dict(data=flows)
 
+def assert_in_choices(name, choices, value):
+    for choice in choices:
+        if value == choice:
+            return
+
+    raise ValueError("Values for %s must be in %s" % (name, choices))
+
+def assert_is_list(name, value):
+    if not isinstance(value, list):
+        raise ValueError("Value for %s must be a list." % name)
+
+def assert_is_string(name, value):
+    if not isinstance(value, basestring):
+        raise ValueError("Value for %s must be a string." % name)
+
+def convert_to_int(name, value):
+    try:
+        return long(value, 0)
+    except ValueError:
+        raise ValueError("Value for %s must be an integer (got %s)." % (
+            name, value))
+
+
+def convert_boolean(name, value):
+    if value in ["true", "on"]:
+        value = True
+    elif value in ["false", "", "off"]:
+        value = False
+    else:
+        raise ValueError("Value for %s must be boolean." % name)
+
+    return value
+
+
+def validate_plugin_args(plugin_arg, spec):
+    """Ensures that plugin_arg follows the spec."""
+    for arg, desc in spec["args"].iteritems():
+        if arg not in plugin_arg:
+            continue
+
+        type = desc["type"]
+        value = plugin_arg[arg]
+        if type == "ChoiceArray":
+            assert_is_list(arg, value)
+            if not value:
+                del plugin_arg[arg]
+                continue
+
+            for sub_value in value:
+                assert_in_choices(arg, desc["choices"], sub_value)
+
+        elif type == "Choice":
+            assert_in_choices(arg, desc["choices"], value)
+
+        elif type == "String":
+            if "choices" in desc:
+                assert_in_choices(arg, desc["choices"], value)
+
+            # Remove empty values.
+            if value == "":
+                del plugin_arg[arg]
+
+        elif type == "IntParser":
+            # Remove empty values.
+            if value == "":
+                del plugin_arg[arg]
+            else:
+                plugin_arg[arg] = convert_to_int(arg, value)
+
+        elif type in ["ArrayStringParser", "ArrayString"]:
+            assert_is_list(arg, value)
+            # Remove empty lists.
+            if not value:
+                del plugin_arg[arg]
+                continue
+
+            for sub_value in value:
+                assert_is_string(arg, sub_value)
+
+        elif type == "RegEx":
+            # Remove empty entries.
+            if not value:
+                del plugin_arg[arg]
+                continue
+
+            try:
+                re.compile(value)
+            except Exception as e:
+                raise ValueError("Value for %s must be a valid regex: %s" % (
+                    arg, e))
+
+        elif type == "ArrayIntParser":
+            assert_is_list(arg, value)
+            # Remove empty lists.
+            if not value:
+                del plugin_arg[arg]
+                continue
+
+            converted_list = []
+            for sub_value in value:
+                if sub_value == "":
+                    continue
+
+                converted_list.append(convert_to_int(arg, sub_value))
+
+            plugin_arg[arg] = converted_list
+
+        elif type == "Boolean":
+            # Remove empty lists.
+            if not value:
+                del plugin_arg[arg]
+                continue
+
+            plugin_arg[arg] = convert_boolean(arg, value)
+
 
 def launch_plugin_flow(current, client_id, rekall_session, plugin, plugin_arg):
     """Launch the flow on the client."""
     db = current.db
     flow_id = utils.new_flow_id()
+    spec = plugins.RekallAPI(current).get(plugin)
+    if not spec:
+        raise ValueError("Unknown plugin")
+
+    # Validate both plugin args and session args.
+    validate_plugin_args(plugin_arg, spec)
+    validate_plugin_args(rekall_session, plugins.SessionAPI(current))
+
     flow = agent.Flow.from_keywords(
         flow_id=flow_id,
         created_time=time.time(),
@@ -110,6 +235,8 @@ def launch_plugin_flow(current, client_id, rekall_session, plugin, plugin_arg):
 
     audit.log(current, "FlowLaunchPlugin", flow_id=flow_id, plugin=plugin,
               client_id=client_id)
+
+    return {}
 
 
 def make_canned_flow(current, flow_ids, client_id):

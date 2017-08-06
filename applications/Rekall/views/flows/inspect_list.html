@@ -11,7 +11,12 @@
     <li><a href="{{=URL(f='list', vars=dict(client_id=client_id))}}"
            class="link">
         Run Rekall Plugin</a></li>
-    <li><a href="#">Collect Artifacts</a></li>
+    <li><a href="{{=URL(f='launch', vars=dict(plugin='Search', client_id=client_id))}}"
+           class="link">
+        Run EFilter Query</a></li>
+    <li><a href="{{=URL(f='launch', vars=dict(plugin='OSQuery', client_id=client_id))}}"
+           class="link">
+        Run OSQuery</a></li>
   </ul>
 
   <button type="button" class="btn btn-default disabled" id="delete">

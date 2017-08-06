@@ -33,15 +33,30 @@ class MethodDesc(object):
 
         self.args_desc = args_desc
 
+    def _store_item(self, result, name, value):
+        if not name:
+            return
+
+        if "." in name:
+            pre, post = name.split(".", 1)
+            self._store_item(result.setdefault(pre, {}), post, value)
+
+        elif name.endswith("[]"):
+            name = name[:-2]
+            if value == '':
+                value = []
+            elif isinstance(value, basestring):
+                value = [value]
+
+        result[name] = value
+
     def convert_to_arrays(self, kwargs):
         """Web2py does not properly convert jquery's array notation."""
+        result = {}
         for k in list(kwargs):
-            if k and k.endswith("[]"):
-                v = kwargs.pop(k)
-                if isinstance(v, basestring):
-                    v = [v]
-                kwargs[k[:-2]] = v
-        return kwargs
+            self._store_item(result, k, kwargs[k])
+
+        return result
 
     def run(self, current, args, kwargs):
         return self.method(current, args, self.convert_to_arrays(kwargs))
@@ -296,6 +311,10 @@ api_dispatcher.register("/plugin/get", plugins.get,
                         [require_csrf_token(),
                          users.require_application("application.login")])
 
+api_dispatcher.register("/plugin/session_api", plugins.SessionAPI,
+                        [require_csrf_token(),
+                         users.require_application("application.login")])
+
 # Get information about collections for a specific client.
 api_dispatcher.register("/collections/metadata", collections.metadata,
                         [require_csrf_token(),
@@ -306,7 +325,7 @@ api_dispatcher.register("/collections/get", collections.get,
                          collections.require_collection_access])
 
 # Deal with flows. Must have at least Examiner access to the client.
-api_dispatcher.register("/flows/list", flows.list,
+api_dispatcher.register("/flows/list", flows.list_flows,
                         [require_csrf_token(),
                          users.require_client("clients.view")])
 

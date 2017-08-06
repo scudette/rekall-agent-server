@@ -1,6 +1,11 @@
 // Various utilities for the UI
 rekall.utils = {};
 
+rekall.utils.markdown = function(selector, template) {
+  var converter = new showdown.Converter();
+  selector.html(converter.makeHtml(template.text()));
+};
+
 rekall.utils.load = function(url, data) {
   if (data) {
     url += "?" + $.param(data);
@@ -21,41 +26,7 @@ rekall.utils.load = function(url, data) {
       $(".loading").toggleClass("disabled", true);
     }
   });
-}
-
-rekall.utils.submit_form = function(obj) {
-  var selector = obj.selector || "form";
-  var url = obj.url || $(selector).attr("action");
-  var method = $(selector).attr("method") || "GET";
-  var data;
-
-  if (method == "GET") {
-    url += "?" + $(selector).serialize();
-  } else {
-    data = $(selector).serializeArray();
-  }
-  $(".loading").toggleClass("disabled", false);
-  $.ajax({
-    url: url,
-    method: method,
-    headers: {
-      "x-rekall-bare-layout": 1
-    },
-    data: data,
-    success: function(html) {
-      $("#main").html(html);
-      if (window.location.href != url) {
-        window.history.pushState({url: url, data: data, method: method}, "", url);
-      }
-
-      if (obj.next) {
-        rekall.utils.load(obj.next, obj.data);
-      } else {
-        $(".loading").toggleClass("disabled", true);
-      }
-    }
-  });
-}
+};
 
 rekall.utils.api = function(endpoint) {
   return rekall.globals.api_route + endpoint;
@@ -1060,7 +1031,216 @@ rekall.clients.show_info = function(client_id) {
 }
 
 
-rekall.flows = {}
+rekall.flows = {};
+
+rekall.flows.build_form_from_spec = function(selector, spec, options) {
+  if (!options) {
+    options = {};
+  }
+
+  var arg_prefix = options.prefix || "";
+
+  var make_array_string_input = function(arg, desc, first, title) {
+    var input = $('<input class="form-control" type="text">')
+          .attr("name", arg_prefix + arg + "[]")
+          .attr("title", title || "");
+    var add_input = $('<span class="input-group-addon">+</span>');
+    var remove_input = $('<span class="input-group-addon">-</span>');
+    var result = $('<div class="input-group input-group-sm">')
+          .append(input)
+          .append(add_input)
+          .append(remove_input);
+
+    add_input.click(function() {
+      result.after(make_array_string_input(arg, desc, false, title));
+    });
+
+    if (first) {
+      remove_input.addClass("disabled");
+    } else {
+      remove_input.click(function () {
+        result.html("").hide();
+      });
+    }
+
+    return result;
+  };
+
+  var make_choices = function(arg, desc, multiple) {
+    var name = arg_prefix + arg;
+    var select = $('<select class="form-control">');
+
+    // For ChoiceArray we need to send an array of choices.
+    if (multiple) {
+      name += "[]";
+      select.attr("multiple", true);
+    };
+    select.attr("name", name);
+
+    for (var i=0; i<desc.choices.length; i++) {
+      var choice = desc.choices[i];
+      var defaults = desc.default || [];
+      var is_choice_default = false;
+
+      if (multiple) {
+        $.each(defaults, function(i) {
+          if (defaults[i] == choice) {
+            is_choice_default = true;
+          }});
+      } else {
+        is_choice_default = defaults == choice;
+      }
+
+      var opt_element = $('<option>').attr("value", choice).text(choice);
+      if (is_choice_default) {
+        opt_element.attr("selected", true);
+      }
+
+      select.append(opt_element);
+    }
+    return select;
+  };
+
+  var make_text_input = function(arg, desc, title) {
+    result = $("<input class='form-control'>")
+      .attr("name", arg_prefix + arg)
+      .attr("title", title);
+    if (desc.default) {
+      result.attr('placeholder', desc.default);
+    };
+
+    return result;
+  };
+
+  var make_checkbox_input = function(arg, desc) {
+    var result = $('<input class="form-control" type="checkbox">')
+          .attr("name", arg);
+
+    if (desc.default)
+      result.attr("value", "on");
+
+    return result;
+  };
+
+  var get_input = function(arg, desc) {
+    var type = desc.type || 'String';
+    if (type == 'ChoiceArray') {
+      return make_choices(arg, desc, true);
+
+    } else if (type == 'Choice') {
+      return make_choices(arg, desc, false);
+
+    } else if (type == 'Boolean') {
+      return make_checkbox_input(arg, desc);
+
+    } else if (type == 'IntParser') {
+      return make_text_input(arg, desc, "Integer required");
+
+    } else if (type == "ArrayIntParser" ||
+               type == "ArrayInt") {
+      return make_array_string_input(
+        arg, desc, true, "Integer required");
+    } else if (type == "ArrayStringParser" ||
+               type == "ArrayString") {
+      return make_array_string_input(
+        arg, desc, true, "String required");
+    } else if (type == "RegEx") {
+      return make_text_input(arg, desc, "Regular expression expected");
+    } else if (type == "String") {
+      return make_text_input(arg, desc, "String required");
+    }
+  };
+
+  var make_form_group = function(selector, arg, desc) {
+    var input = get_input(arg, desc);
+    if (!input) {
+      return;
+    }
+
+    var group = $(`
+<div class="form-group">
+  <label class="col-sm-2 control-label">
+  </label>
+</div>`).append($('<div class="col-sm-7">').append(input));
+    group.find("label")
+      .attr("for", arg)
+      .attr("title", desc.help || "")
+      .text(arg);
+
+    selector.append(group);
+  };
+
+  $.each(spec.args, function(arg, desc) {
+    if (desc.hidden && !options.hidden) {
+      return;
+    }
+    make_form_group(selector, arg, desc);
+  });
+};
+
+rekall.flows.build_form = function(selector, plugin, options) {
+  $.ajax(rekall.utils.call({
+    api: "/plugin/get",
+    data: {
+      plugin: plugin
+    },
+    error: rekall.utils.error,
+    success: function(spec) {
+      if (spec.description) {
+        // Render the description into the description screen using markdown.
+        var converter = new showdown.Converter();
+        $("#description").html(converter.makeHtml(spec.description));
+      };
+
+      rekall.flows.build_form_from_spec(selector, spec, options);
+    }
+  }));
+};
+
+rekall.flows.build_session_form = function(selector, options) {
+  var default_session_parameters = {
+    flow_precondition: "",
+    also_upload_files: false,
+    cpu_quota: 60,
+    load_quota: 50,
+    verbose: false,
+    live: "API",
+    autodetect: ["windows_kernel_file", "linux_index", "osx"]
+  };
+
+  $.ajax(rekall.utils.call({
+    api: "/plugin/session_api",
+    error: rekall.utils.error,
+    success: function(spec) {
+      for (var key in spec.args) {
+        spec.args[key].hidden = true;
+      }
+
+      for (var key in default_session_parameters) {
+        var default_value = default_session_parameters[key];
+        spec.args[key].hidden = false;
+        spec.args[key].default = default_value;
+      }
+      rekall.flows.build_form_from_spec(selector, spec, options);
+    }
+  }));
+};
+
+
+rekall.flows.launch_plugin = function(selector, client_id) {
+  var data = selector.serializeArray();
+  $(".loading").toggleClass("disabled", false);
+  $.ajax(rekall.utils.call({
+    api: '/flows/plugins/launch',
+    data: data,
+    error: rekall.utils.error,
+    success: function() {
+      rekall.utils.load(
+        rekall.globals.controllers.inspect_list, {client_id: client_id});
+    }
+  }));
+};
+
 rekall.flows.list_plugins = function(launch_url, client_id, selector) {
   $(selector).DataTable( {
     ajax: rekall.utils.call({
@@ -2491,6 +2671,25 @@ window.onpopstate = function(event) {
 
     /* jQuery chaining */
     return this.each(function() {
+      var widget = $(this);
+      var expand_all = $(
+        `<span class="glyphicon glyphicon-eye-open json-expander"
+          data_state='closed'
+          aria-hidden="true">`);
+      widget.prepend(expand_all);
+
+      expand_all.click(function () {
+        var self = $(this);
+        self.toggleClass("glyphicon-eye-open").toggleClass("glyphicon-eye-close");
+        if (self.attr("data_state") == "closed") {
+          self.attr("data_state", "open");
+          widget.find("li a.json-toggle.collapsed").click();
+        } else {
+          self.attr("data_state", "closed");
+          widget.find("li a.json-toggle").not(".collapsed").click();
+        }
+      });
+
       /* Transform to HTML */
       var html = json2html(json, 0);
       /* Insert HTML in target DOM element */

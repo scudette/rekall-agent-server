@@ -7,21 +7,19 @@
       <span class="input-group-addon btn" type="button" id="go">Search
       </span>
       <input type="text" class="form-control" name="q" placeholder="Search for...">
-    </div><!-- /input-group -->
-  </div><!-- /.col-lg-6 -->
+    </div>
+  </div>
 </form>
 
 <script>
-    var handler = function(event) {
-      if ($("input[name=q]").val()) {
-        rekall.utils.submit_form({
-          url: rekall.globals.controllers.client_search
-        });
-      }
-
-      event.preventDefault();
+  var handler = function(event) {
+    var q = $("input[name=q]").val();
+    if (q) {
+      rekall.utils.load(rekall.globals.controllers.client_search, {q: q});
       return true;
     };
+  };
+
 $("form").submit(handler);
 $("#go").click(handler);
 </script>

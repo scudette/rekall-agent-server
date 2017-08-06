@@ -6357,34 +6357,122 @@
   active_modes: []
 - plugin: Search
   name: search
-  description: |-
+  description: |
     Searches and recombines output of other plugins.
 
     Search allows you to use the EFILTER search engine to filter, transform
     and combine output of most Rekall plugins. The most common use for this
     is running IOCs.
 
-    Some examples that work right now:
-    ==================================
+    ## Some examples
 
-    # Find the process with pid 1:
-    search("select * pslist() where proc.pid == 1")
+    * Find the process with pid 1:
 
-    # Sort lsof output by file descriptor:
-    search("sort(lsof(), fd)") # or:
-    search("select * from lsof() order by fd)")
+      ```
+      search("select * pslist() where proc.pid == 1")
+      ```
 
-    # Filter and sort through lsof in one step:
-    search("select * from lsof() where proc.pid == 1 order by fd)
+    * Sort lsof output by file descriptor:
 
-    # Is there any proc with PID 1, that has a TCPv6 connection and isn't a
-    # dead process?
-    search("(any lsof where (proc.pid == 1 and fileproc.human_type == 'TCPv6'))
-             and not (any dead_procs where (proc.pid == 1))")
+      ```
+      search("select * from lsof() order by fd)")
+      ```
 
-    # Note: "ANY" is just a short hand for "SELECT ANY FROM" which does what
-    # it sounds like, and returns True or False depending on whether the
-    # query has any results.
+    * Filter and sort through lsof in one step:
+
+      ```
+      search("select * from lsof() where proc.pid == 1 order by fd)
+      ```
+
+    * Is there any proc with PID 1, that has a TCPv6 connection and
+      isn't a dead process?
+
+      ```
+      search("(any lsof where (proc.pid == 1 and fileproc.human_type == 'TCPv6'))
+      and not (any dead_procs where (proc.pid == 1))")
+      ```
+
+    Note: "ANY" is just a short hand for "SELECT ANY FROM" which does what
+    it sounds like, and returns True or False depending on whether the
+    query has any results.
+
+    You will probably need to use the *describe* plugin to help
+    discover the exact column structure.
+
+
+    * regex match on array of strings - case insensitive.
+
+      ```
+      select proc, proc.environ from pslist() where
+        proc.environ.TMP =~ "temp"
+      ```
+
+    * Format using the hex() method, using *as* to name columns.
+
+      ```
+      select hex(VAD.start) as start, hex(VAD.end) as end,
+            Protect from vad(proc_regex: "rekal")
+      ```
+
+    * Autoselect column names - second column can not clash with first
+      column name (should be hex, column 1).
+
+      ```
+      select hex(VAD.start), hex(VAD.end), Protect
+            from vad(proc_regex: "rekal")
+      ```
+    * Timestamp user function
+
+      ```
+        select timestamp(proc.create_time) from pslist()
+      ```
+
+    * Yarascan with sub query
+
+      ```
+        select * from file_yara(
+           paths: (
+            select path.filename from glob(
+                "c:\windows\*.exe")).filename,
+           yara_expression: "rule r1 {strings: $a = \"Microsoft\" wide condition: any of them}")
+      ```
+
+    * Parameter interpolations:
+
+      ```
+        a =  "select * from file_yara(paths: ( select path.filename from glob({0})).filename, yara_expression: {1})"
+
+        search a, [r"c:\windows\*.exe",
+             "rule r1 {strings: $a = \"Microsoft\" wide condition: any of them}"]
+      ```
+    * WMI integration + unknown field:
+
+      ```
+        select Result.Name, Result.SessionId, Result.foo
+             from wmi("select * from Win32_Process")
+
+        select Result.Name, Result.BootDevice
+             from wmi("select * from Win32_OperatingSystem")
+      ```
+
+    * Describe WMI dynamic query
+
+      ```
+        describe wmi, dict(query="select * from Win32_Process")
+      ```
+
+    * Substitute a single string
+
+      ```
+        select sub("Microsoft", "MS", Result.Name)
+               from wmi("select * from Win32_OperatingSystem")
+      ```
+    * Substiture an array
+
+      ```
+        select sub("rekal", "REKALL", proc.cmdline) from pslist()
+      ```
+
   args:
     silent:
       type: Boolean
@@ -6397,6 +6485,7 @@
       required: true
     query_parameters:
       type: ArrayString
+      positional: true
       help: Positional parameters for parametrized queries.
     verbosity:
       type: IntParser
