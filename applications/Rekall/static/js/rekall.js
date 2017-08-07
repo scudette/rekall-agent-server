@@ -1114,7 +1114,7 @@ rekall.flows.build_form_from_spec = function(selector, spec, options) {
 
   var make_checkbox_input = function(arg, desc) {
     var result = $('<input class="form-control" type="checkbox">')
-          .attr("name", arg);
+          .attr("name", arg_prefix + arg);
 
     if (desc.default)
       result.attr("value", "on");
