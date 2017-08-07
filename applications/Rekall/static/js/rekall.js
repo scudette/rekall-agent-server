@@ -909,11 +909,18 @@ rekall.clients.search_clients = function (query, selector) {
         }
       },
       {
+        title: "Custom Labels",
+        data: "custom_labels",
+        render: function(labels, type, row, meta) {
+          return labels.join(",");
+        }
+      },
+      {
         title: "Labels",
         data: "labels",
         render: function(labels, type, row, meta) {
           return labels.join(",");
-        },
+        }
       },
     ],
   });
@@ -1727,7 +1734,7 @@ rekall.hunts.view = function(selector) {
         data: "labels",
         render: function(labels, type, row, meta) {
           return labels.join(",");
-        },
+        }
       },
       {
         title: "State",

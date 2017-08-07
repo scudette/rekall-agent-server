@@ -49,10 +49,10 @@
 {{
 response.files.append(URL('static','js/jquery.js'))
 response.files.append(URL('static','css/calendar.css'))
-response.files.append(URL('static','css/rekall.css'))
+response.files.append(URL('static','css/rekall.css', vars=dict(v='1')))
 response.files.append(URL('static','js/calendar.js'))
 response.files.append(URL('static','js/web2py.js'))
-response.files.append(URL('static','js/rekall.js'))
+response.files.append(URL('static','js/rekall.js', vars=dict(v='1')))
 response.files.append(URL('static','js/jq-ajax-progress.js'))
 response.files.append(URL('static','js/dataTables/datatables.min.css'))
 response.files.append(URL('static','js/dataTables/DataTables-1.10.15/css/jquery.dataTables.min.css'))
