@@ -20,7 +20,9 @@ def SessionAPI(current):
         current.request.folder, "private", "session_api.yaml")
     global _RekallSessionAPI
     if _RekallSessionAPI is None:
-        _RekallSessionAPI =yaml.load(open(yaml_path).read())
+        _RekallSessionAPI = dict(name="session", args={})
+        for arg in yaml.load(open(yaml_path).read()):
+            _RekallSessionAPI["args"][arg["name"]] = arg
 
     return _RekallSessionAPI
 
@@ -30,7 +32,7 @@ def list(current):
     return dict(
         data=[{'plugin': x['plugin'],
                'name': x['name'],
-               } for x in RekallAPI(current).values()])
+              } for x in RekallAPI(current).values()])
 
 
 def get(current, plugin=None):

@@ -1,68 +1,76 @@
 {{extend response.layout_path}}
 
-{{if error: }}
-  <div id="error" style="display: none">
-    {{=error.body}}
-
-    <a href="{{=URL(c='clients', f='request_approval', vars=dict(client_id=client_id))}}"
-       type="button" class="btn btn-info">Request Approval</a>
-  </div>
-  <script>
-    $(function() {
-      $("#modalContainer").html(
-          rekall.templates.modal_template(
-              $("#error").html(),
-              "Error: {{=error.message}}",
-              ));
-      $("#modal").modal("show");
-    });
-  </script>
-{{pass}}
-
+<div class="panel-group"
+     id="accordion" role="tablist"
+     aria-multiselectable="true">
 <div class="panel panel-default">
-  <div class="panel-heading">{{=api_info['name']}}</div>
-  <div class="panel-body">{{=api_info.get('description','')}}</div>
+  <div class="panel-heading" id="headingOne" role="tab">
+    <h4 class="panel-title">
+      <a role="button" data-toggle="collapse"
+         class="collapsed"
+         data-parent="#accordion" href="#collapseOne"
+         aria-expanded="false" aria-controls="collapseOne">
+        <span class="glyphicon glyphicon-book" aria-hidden="true">&nbsp;</span>
+        {{=plugin}} Plugin
+      </a>
+    </h4>
+  </div>
+  <div id="collapseOne" class="panel-collapse collapse" role="tabpanel"
+       aria-labelledby="headingOne">
+    <div class="panel-body"><div id="description"></div></div>
+  </div>
+</div>
+<div class="panel panel-default">
+  <div class="panel-heading"  id="headingTwo" role="tab">
+    <h4 class="panel-title">
+      <a role="button" data-toggle="collapse"
+         data-parent="#accordion" href="#collapseTwo"
+         aria-expanded="true" aria-controls="collapseTwo">
+        <span class="glyphicon glyphicon-expand" aria-hidden="true">&nbsp;</span>
+        Launch
+      </a>
+    </h4>
+  </div>
+  <div id="collapseTwo" class="panel-collapse collapse in"
+       role="tabpanel" aria-labelledby="headingTwo">
+    <div class="panel-body">
+      <form class="form-horizontal">
+        <div id="input_form"></div>
+        <div class="form-group">
+          <label class="col-sm-2 control-label"></label>
+          <div class="col-sm-7">
+            <a class="btn btn-primary" role="button"
+               data-toggle="collapse" href="#session_form"
+               aria-expanded="false" aria-controls="session_form">
+              Session Parameters
+            </a>
+            <input type="hidden" name="plugin" value="{{=plugin}}"></input>
+            <input type="hidden" name="client_id" value="{{=client_id}}"></input>
+            <a class="btn btn-default" role="button" href="#" id="submit">
+              Submit
+            </a>
+          </div>
+        </div>
 
-  <form enctype="multipart/form-data" class="form-horizontal"
-        action="{{=URL()}}" method="post">
-    {{ for input in inputs: }}
-      {{=input}}
-    {{pass}}
-
-    <div class="form-group">
-      <label class="col-sm-2 control-label"></label>
-      <div class="col-sm-7">
-        <a class="btn btn-primary" role="button"
-           data-toggle="collapse" href="#sessionForm"
-           aria-expanded="false" aria-controls="sessionForm">
-          Session Parameters
-        </a>
-        {{=form.hidden_fields()}}
-        <input type="hidden" name="plugin" value="{{=plugin}}"></input>
-        <input type="hidden" name="client_id" value="{{=client_id}}"></input>
-        <input type="submit" class="btn btn-default"></input>
-      </div>
+        <div class="collapse" id="session_form">
+          <div class="well">
+          </div>
+        </div>
+      </form>
     </div>
-
-    <div class="collapse" id="sessionForm">
-      <div class="well">
-        {{ for input in session_inputs: }}
-          {{=input}}
-          {{pass}}
-      </div>
-    </div>
-  </form>
-
+  </div>
 </div>
 
 <script>
-    $("input[type=submit]").click(function (event) {
-      rekall.utils.submit_form({
-        next: rekall.globals.controllers.inspect_list,
-        data: {
-          client_id: "{{=client_id}}",
-        }
-      });
-      event.preventDefault();
-    });
+  rekall.flows.build_form($("#input_form"), "{{=plugin}}", {
+    prefix: "plugin_arg."
+  });
+
+  rekall.flows.build_session_form($("#session_form .well"), {
+    prefix: "rekall_session."
+  });
+
+  $("#submit").click(function () {
+    rekall.flows.launch_plugin($("form"), "{{=client_id}}");
+  });
 </script>
