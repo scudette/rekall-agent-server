@@ -12,7 +12,7 @@ def log(current, type, **kwargs):
 
     # Access was made via a token.
     if current.request.token:
-        kwargs["token_id"] = current.request.token.token_id
+        kwargs["token_id"] = current.request.token["token_id"]
 
     current.db.audit.insert(timestamp=datetime.datetime.now(),
                             message=serializer.unserialize(kwargs),

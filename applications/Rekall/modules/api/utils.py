@@ -63,7 +63,7 @@ def BaseValueList(obj):
 def get_current_username(current):
     # If access was granted through a token, the username is the delegator.
     if current.request.token:
-        return current.request.token.delegator
+        return current.request.token["delegator"]
 
     user = users.get_current_user()
     if not user:

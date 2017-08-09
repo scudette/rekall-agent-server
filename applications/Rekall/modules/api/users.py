@@ -147,6 +147,9 @@ def list(current):
 def add(current, user, resource, role, condition="{}"):
     """Add a new user role grant."""
     db = current.db
+    if role not in roles:
+        raise ValueError("Role %s is not valid." % role)
+
     db.permissions.update_or_insert(
         dict(user=user, resource=resource, role=role),
         user=user,
