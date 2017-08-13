@@ -4,3 +4,8 @@
 Click the following link to login:
 
 <a id='logout' href={{=logout_url}}>Login</a>
+
+{{if demo:}}
+<h2>This is a demo installation!</h2>
+    If you wish to grant yourself access, please click <a class='link' href='{{=URL(c="default", f="demo")}}'>here</a>
+{{pass}}

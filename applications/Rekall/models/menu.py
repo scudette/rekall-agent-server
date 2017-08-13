@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
-# this file is released under public domain and you can use without limitations
-
-# ----------------------------------------------------------------------------------------------------------------------
-# Customize your APP title, subtitle and menus here
-# ----------------------------------------------------------------------------------------------------------------------
 import api
+from api import config
 from api import users
 from api import utils
 import logging
@@ -68,9 +64,22 @@ def InitializeMenu():
         ])
     ]
 
+    if config.GetConfig(current).demo:
+        response.right_menu.append(
+            ("Demo", True, URL(c="default", f="demo")))
+
+
+WHITELIST = set([
+    ("default", "logout"),
+    ("default", "demo"),
+])
+
+
+def is_in_whitlist():
+    return (request.controller, request.function) in WHITELIST
 
 # This page is always visible to everyone.
-if (request.controller, request.function) == ("default", "logout"):
+if is_in_whitlist():
     request.menu = []
 
 # API access has its own ACL mechanism.

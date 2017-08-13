@@ -1,0 +1,57 @@
+{{extend response.layout_path}}
+
+<h1> This is a demo application </h1>
+
+The demo application is exactly the same as the fully installed
+application bar for the following restrictions:
+
+<ul>
+  <li>
+    All data is visible to anyone who logs into this
+    installation. Please do not input sensitive information into the app
+    since it is visible to anyone. This includes your GMail user account
+    which will also be visible to anyone.
+  </li>
+  <li>
+    All data will be periodically wiped without warning. Please do
+    not expect data to be retained.
+  </li>
+  <li>
+    Anyone can fully interact with this demo installation. This means
+    that anyone else can delete, modify or add any data, including
+    remove data that you add. Please do not expect your data to be
+    protected in any way.
+  </li>
+  <li>
+    Please do not abuse the application. Abusers will be
+    banned. Please remember that the application maintains detailed
+    audit logging as well as request logs.
+  </li>
+  <li>
+    If you find a problem or bug, please report it at
+    support@rekall-forensic.com.
+  </li>
+</ul>
+
+By using this application you acknowledge that you have read and
+understood these conditions. Press the below button and follow the login link.
+
+<p>
+<a role="button" class="btn btn-primary" href="#" id="make_me_admin">
+  Make Me Admin
+</a>
+    </p>
+
+<script>
+  $("#make_me_admin").click(function () {
+      $.ajax(rekall.utils.call({
+          api: "/demo/make_me_admin",
+          error: rekall.utils.error,
+          success: function() {
+              // Need to do a full reload so the menu is rendered.
+              window.location = "{{=login_url}}";
+          }
+      }));
+
+  });
+</script>

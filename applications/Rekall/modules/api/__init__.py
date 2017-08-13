@@ -6,11 +6,14 @@ This is similar to the web2py Service() object.
 import logging
 
 from gluon import http
+from gluon import globals
 
 from api import audit
 from api import client
 from api import collections
+from api import config
 from api import control
+from api import demo
 from api import flows
 from api import hunts
 from api import forensic_artifacts
@@ -443,3 +446,17 @@ api_dispatcher.register("/users/notifications/read", users.read_notifications,
 api_dispatcher.register("/users/notifications/clear", users.clear_notifications,
                         [require_csrf_token(),
                          users.require_application("application.login")])
+
+
+# These APIs are only available when running in demo mode.
+
+if config.GetConfig(globals.current).demo:
+    # Anyone can call this.
+    api_dispatcher.register("/demo/make_me_admin", demo.make_me_admin,
+                            [require_csrf_token()])
+
+    # This permission is not granted by any roles by default - must be
+    # GAE admin to launch.
+    api_dispatcher.register("/demo/delete_everything", demo.clear_all_data,
+                            [require_csrf_token(),
+                             users.require_application("demo.clear")])
