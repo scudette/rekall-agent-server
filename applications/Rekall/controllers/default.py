@@ -1,5 +1,6 @@
 # @*- coding: utf-8 -*-
 import api as api_module
+from api import config
 from api import users
 from api import utils
 
@@ -12,12 +13,16 @@ def index():
 
 def logout():
     logout_url = gae_users.create_login_url("/")
-    return dict(logout_url=logout_url)
+    return dict(logout_url=logout_url, demo=config.GetConfig(current).demo)
 
 
 def api():
     """Provide an introspective view of the available APIs."""
     return dict()
+
+
+def demo():
+    return dict(login_url=gae_users.create_login_url("/"))
 
 
 def call():

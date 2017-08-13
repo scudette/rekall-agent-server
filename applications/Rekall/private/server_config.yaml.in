@@ -1,0 +1,9 @@
+# This file is the template for server configuration.  To make this
+# file apply, copy it to server_config.yaml and edit as needed. Note
+# that server_config.yaml is not tracked by git and therefore will not
+# be overwritten when you git pull a new version, nor will it be
+# created when the repo is first cloned.
+
+# If this is set to True, the installtion will be considered "demo"
+# mode. It allows anyone to log in and create their own account.
+demo: false
