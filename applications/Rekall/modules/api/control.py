@@ -3,9 +3,9 @@ import cgi
 import datetime
 import time
 
-from rekall_lib.types import agent
-from rekall_lib.types import client
-from rekall_lib.types import location
+from rekall_lib.rekall_types import agent
+from rekall_lib.rekall_types import client
+from rekall_lib.rekall_types import location
 
 from google.appengine.ext import blobstore
 from google.appengine.ext import ndb

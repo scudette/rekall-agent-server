@@ -5,7 +5,7 @@ from artifacts import registry
 from artifacts import source_type
 
 from gluon import http
-from rekall_lib.types import artifacts
+from rekall_lib.rekall_types import artifacts
 
 import re
 import yaml

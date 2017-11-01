@@ -11,9 +11,9 @@ import uuid
 from gluon.globals import current
 
 from api import dal
-from rekall_lib.types import agent
-from rekall_lib.types import artifacts
-from rekall_lib.types import location
+from rekall_lib.rekall_types import agent
+from rekall_lib.rekall_types import artifacts
+from rekall_lib.rekall_types import location
 
 # -------------------------------------------------------------------------
 # app configuration made easy. Look inside private/appconfig.ini

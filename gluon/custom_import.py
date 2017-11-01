@@ -11,6 +11,7 @@ Support for smart import syntax for web2py applications
 from gluon._compat import builtin, unicodeT, PY2, to_native
 import os
 import sys
+import traceback
 import threading
 from gluon import current
 
@@ -101,6 +102,7 @@ def custom_importer(name, globals=None, locals=None, fromlist=None, level=-1):
             try:
                 return NATIVE_IMPORTER(name, globals, locals, fromlist, level)
             except ImportError as e3:
+                traceback.print_tb(import_tb)
                 raise ImportError(e1, import_tb)  # there an import error in the module
         except Exception as e2:
             raise  # there is an error in the module

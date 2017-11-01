@@ -1,7 +1,7 @@
 """A general purpose auditing module."""
 
 from rekall_lib import serializer
-from rekall_lib.types import agent
+from rekall_lib.rekall_types import agent
 from api import utils
 import datetime
 
@@ -17,8 +17,6 @@ def log(current, type, **kwargs):
     current.db.audit.insert(timestamp=datetime.datetime.now(),
                             message=serializer.unserialize(kwargs),
                             user=user, type=type)
-
-
 
 def search(current, query):
     db = current.db

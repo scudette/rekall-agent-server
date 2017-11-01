@@ -13,7 +13,7 @@ from google.appengine.api import users
 
 from rekall_lib import crypto
 from rekall_lib import serializer
-from rekall_lib.types import agent
+from rekall_lib.rekall_types import agent
 
 
 toplevel = os.path.dirname(__file__) + "/../.."
