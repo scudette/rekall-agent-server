@@ -2,8 +2,8 @@ import time
 
 from gluon import html
 
-from rekall_lib.types import actions
-from rekall_lib.types import agent
+from rekall_lib.rekall_types import actions
+from rekall_lib.rekall_types import agent
 from api import audit
 from api import users
 from api import utils

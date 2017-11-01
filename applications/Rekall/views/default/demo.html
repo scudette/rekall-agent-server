@@ -49,7 +49,7 @@ understood these conditions. Press the below button and follow the login link.
           error: rekall.utils.error,
           success: function() {
               // Need to do a full reload so the menu is rendered.
-              window.location = "{{=login_url}}";
+              window.location = rekall.globals.controllers.home;
           }
       }));
 

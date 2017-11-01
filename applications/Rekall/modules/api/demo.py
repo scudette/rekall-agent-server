@@ -1,5 +1,5 @@
 """Implements demo specific APIs."""
-from rekall_lib.types import agent
+from rekall_lib.rekall_types import agent
 
 from api import audit
 from api import users

@@ -3,8 +3,8 @@ import re
 import time
 
 from gluon import html
-from rekall_lib.types import actions
-from rekall_lib.types import agent
+from rekall_lib.rekall_types import actions
+from rekall_lib.rekall_types import agent
 
 import api
 
