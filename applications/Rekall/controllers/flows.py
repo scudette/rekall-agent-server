@@ -49,6 +49,7 @@ def collection_view():
     if request.vars.collection_id:
         return dict(collection_id=request.vars.collection_id,
                     client_id=request.vars.client_id,
+                    flow_id=request.vars.flow_id,
                     part=part)
 
 def save():
