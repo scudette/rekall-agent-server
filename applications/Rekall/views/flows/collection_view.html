@@ -5,9 +5,9 @@
 <nav aria-label="breadcrumb" role="navigation">
   <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{{=URL(c='default', f='index')}}">Home</a></li>
-    <li class="breadcrumb-item"><a href="{{=URL(c='flows', f='inspect_list')}}?client_id={{=client_id}}">{{=client_id}}</a></li>
-      <li class="breadcrumb-item"><a href="{{=URL(c='flows', f='description')}}?client_id={{=client_id}}&flow_id={{=flow_id}}">{{=flow_id}}</a></li>
-      <li class="breadcrumb-item"><a href="#">{{=collection_id}}</a></li>
+      <li class="breadcrumb-item"><a href="{{=URL(c='flows', f='inspect_list')}}?client_id={{=client_id}}">{{=client_id}}</a></li>
+      <li class="breadcrumb-item"><a href="{{=URL(c='flows', f='description', vars=dict(client_id=client_id, flow_id=flow_id))}}">{{=flow_id}}</a></li>
+      <li class="breadcrumb-item">{{=collection_id}}</li>
   </ol>
 </nav>
 

@@ -2122,8 +2122,8 @@ rekall.cell_renderers.collection_ids_renderer = function(
   for (var i=0; i<collection_ids.length; i++) {
     result += rekall.utils.make_link(
         rekall.globals.controllers.collection_view + "?" + $.param({
-          collection_id: collection_ids[i],
-        }) + "&" + $.param({client_id: client_id}) + "&" + $.param({flow_id: flow_id}),
+          collection_id: collection_ids[i],client_id: client_id,flow_id: flow_id
+        }),
         "glyphicon-book");
   }
 
