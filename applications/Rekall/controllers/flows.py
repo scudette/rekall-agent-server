@@ -26,7 +26,12 @@ def inspect_list():
 def hex_view():
     upload_id = request.vars.upload_id
     offset = request.vars.offset or 0
-    return dict(upload_id=upload_id, offset=offset)
+    client_id = request.vars.client_id
+    flow_id = request.vars.flow_id
+    return dict(upload_id=upload_id,
+                offset=offset,
+                client_id=client_id,
+                flow_id=flow_id)
 
 
 def list_canned():

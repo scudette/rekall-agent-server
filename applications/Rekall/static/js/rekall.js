@@ -1458,7 +1458,7 @@ rekall.flows.describe_flow = function(client_id, flow_id) {
               render: function(upload_id, type, row, meta) {
                 return rekall.utils.make_link(
                     rekall.globals.controllers.hex_view + "?" + $.param({
-                      upload_id: upload_id,
+                      upload_id: upload_id,client_id:client_id, flow_id:flow_id
                     }), "glyphicon-file");
               }
             },
