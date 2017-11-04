@@ -1,5 +1,13 @@
 {{extend response.layout_path}}
 
+<nav aria-label="breadcrumb" role="navigation">
+  <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{{=URL(c='default', f='index')}}">Home</a></li>
+      <li class="breadcrumb-item">{{=client_id}}</li>
+  </ol>
+</nav>
+
+
 <div class="btn-group toolbar" role="toolbar" aria-label="toolbar">
   <button type="button" class="btn btn-default dropdown-toggle right-square"
           data-toggle="dropdown" aria-haspopup="true" id="add_flow">

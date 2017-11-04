@@ -1439,7 +1439,7 @@ rekall.flows.describe_flow = function(client_id, flow_id) {
 
       $("#collections .panel-body").html(
           rekall.cell_renderers.collection_ids_renderer(
-              description.collection_ids));
+              description.collection_ids, client_id, flow_id));
 
       // If no files are available, disable the tab.
       if (description.file_infos.length == 0) {
@@ -1458,7 +1458,7 @@ rekall.flows.describe_flow = function(client_id, flow_id) {
               render: function(upload_id, type, row, meta) {
                 return rekall.utils.make_link(
                     rekall.globals.controllers.hex_view + "?" + $.param({
-                      upload_id: upload_id,
+                      upload_id: upload_id,client_id:client_id, flow_id:flow_id
                     }), "glyphicon-file");
               }
             },
@@ -2113,7 +2113,7 @@ rekall.cell_renderers.flow_summary_renderer = function(flow) {
 }
 
 rekall.cell_renderers.collection_ids_renderer = function(
-    collection_ids, type, row, meta) {
+    collection_ids, client_id, flow_id, type, row, meta) {
   var result = "";
   if (!collection_ids) {
     return result;
@@ -2122,7 +2122,7 @@ rekall.cell_renderers.collection_ids_renderer = function(
   for (var i=0; i<collection_ids.length; i++) {
     result += rekall.utils.make_link(
         rekall.globals.controllers.collection_view + "?" + $.param({
-          collection_id: collection_ids[i],
+          collection_id: collection_ids[i],client_id: client_id,flow_id: flow_id
         }),
         "glyphicon-book");
   }
