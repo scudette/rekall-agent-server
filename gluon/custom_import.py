@@ -9,6 +9,7 @@ Support for smart import syntax for web2py applications
 -------------------------------------------------------
 """
 from gluon._compat import builtin, unicodeT, PY2, to_native
+import logging
 import os
 import sys
 import traceback
@@ -90,6 +91,7 @@ def custom_importer(name, globals=None, locals=None, fromlist=None, level=-1):
                         try:
                             result = result or sys.modules[modules_prefix+'.'+itemname]
                         except KeyError as e:
+                            logging.warn('Cannot import module %s' % str(e))
                             raise ImportError('Cannot import module %s' % str(e))
                         modules_prefix += "." + itemname
                     return result
@@ -102,7 +104,6 @@ def custom_importer(name, globals=None, locals=None, fromlist=None, level=-1):
             try:
                 return NATIVE_IMPORTER(name, globals, locals, fromlist, level)
             except ImportError as e3:
-                traceback.print_tb(import_tb)
                 raise ImportError(e1, import_tb)  # there an import error in the module
         except Exception as e2:
             raise  # there is an error in the module
