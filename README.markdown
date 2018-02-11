@@ -12,21 +12,20 @@ web2py docs, examples and sample application.
 ## Getting started.
 
 If you have not yet installed the project dependencies, run
-./bootstrap.sh now to download depenencies into the site-packages
+./bootstrap.sh now to download dependencies into the site-packages
 directory.
 
 To develop, first install the gcloud SDK as described here:
 https://cloud.google.com/sdk/downloads
 
 You can now run the application locally using the AppEngine
-delevelopment server. This has some nice features:
+development server. This has some nice features:
 
 1) You can easily log in and log out from different user accounts to
-   simulate how Rekall behaves for different users (with different per
-   missions granted).
+   simulate how Rekall behaves for different users (with different permissions granted).
 
 2) The server will automatically pick any changes in the files in this
-   directory and reimport the relevant files seemlessly.
+   directory and reimport the relevant files seamlessly.
 
 
 ### Deploying to AppEngine.
