@@ -32,3 +32,6 @@ delevelopment server. This has some nice features:
 ### Deploying to AppEngine.
 
 gcloud app deploy . --project rekall-test-site
+
+## Copyright
+Copyright 2017-2018 Google LLC. This is not an officially supported Google product.
